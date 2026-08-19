@@ -17,6 +17,9 @@ import { computeSleepQuality } from "@/app/lib/sleep";
 import { generateCoachingTips, timeGreeting } from "@/app/lib/coaching";
 import { computeVitality, vitalityColor, vitalityBg } from "@/app/lib/vitality";
 import { useLocalStorage } from "@/app/lib/use-local-state";
+import { FadeIn, AnimatedNumber, AnimatedBar, showToast } from "@/app/lib/animations";
+import DataManager from "@/app/components/DataManager";
+import WeeklyReport from "@/app/components/WeeklyReport";
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WATER_GOAL = 8;
@@ -139,14 +142,15 @@ export default function DashboardTab() {
     };
     setProgress((prev) => upsertCheckIn(prev, entry));
     if (entry.weightKg) setProfile((p) => ({ ...p, weightKg: entry.weightKg! }));
+    showToast("Check-in saved!", "success");
   };
 
   const weightDelta =
     weightTrend.length >= 2 ? weightTrend[weightTrend.length - 1].value - weightTrend[0].value : null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+    <div className="space-y-6 page-enter">
+      <FadeIn delay={0}><div className="flex flex-col gap-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
@@ -390,9 +394,9 @@ export default function DashboardTab() {
             </div>
           </div>
         </div>
-      </div>
+      </div></FadeIn>
 
-      {/* Today's workout */}
+      <FadeIn delay={100}>{/* Today's workout */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="text-emerald-600 dark:text-emerald-400">
@@ -409,9 +413,9 @@ export default function DashboardTab() {
         <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
           Full week plan + the abs circuit live in the <strong>Fitness</strong> tab.
         </p>
-      </section>
+      </section></FadeIn>
 
-      {/* Today's meal plan */}
+      <FadeIn delay={200}>{/* Today's meal plan */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="text-emerald-600 dark:text-emerald-400">
@@ -443,9 +447,9 @@ export default function DashboardTab() {
             </div>
           ))}
         </div>
-      </section>
+      </section></FadeIn>
 
-      {/* Daily anchors */}
+      <FadeIn delay={300}>{/* Daily anchors */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="text-emerald-600 dark:text-emerald-400">
@@ -471,9 +475,9 @@ export default function DashboardTab() {
             </div>
           ))}
         </div>
-      </section>
+      </section></FadeIn>
 
-      {/* Progress tracking */}
+      <FadeIn delay={400}>{/* Progress tracking */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
           <span className="text-emerald-600 dark:text-emerald-400">📈</span>
@@ -549,7 +553,10 @@ export default function DashboardTab() {
             )}
           </div>
         </div>
-      </section>
+      </section></FadeIn>
+
+      <FadeIn delay={500}><WeeklyReport /></FadeIn>
+        <FadeIn delay={600}><DataManager /></FadeIn>
     </div>
   );
 }

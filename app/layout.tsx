@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,18 @@ export const metadata: Metadata = {
   title: "LifeOS — Your Daily Health & Time Companion",
   description:
     "Free, evidence-based tools for sleep, daily routine, nutrition, and fitness. Sleep cycle calculator, chronotype planner, habit tracker, macro calculator, and a science-based six-pack plan — no registration, private by design.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon-192.png",
+    other: [
+      { rel: "icon", type: "image/png", sizes: "192x192", url: "/icon-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", url: "/icon-512.png" },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#10B981",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -24,7 +36,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }`,
+        }}
+      />
     </html>
   );
 }
