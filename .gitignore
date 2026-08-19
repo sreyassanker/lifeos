@@ -1,5 +1,5 @@
-# dependencies
-/node_modules
+# ─── Dependencies ──────────────────────────────────────────────
+/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -8,48 +8,96 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ─── Next.js ───────────────────────────────────────────────────
 /.next/
 /out/
+/.swc/
 
-# production
-/build
+# ─── Build outputs ─────────────────────────────────────────────
+/build/
 
-# misc
+# ─── Android / Capacitor ───────────────────────────────────────
+android/app/build/
+android/build/
+android/.gradle/
+android/capacitor-android/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/keystore.properties
+android/app/src/main/assets/capacitor.config.json
+
+# ─── APK outputs ───────────────────────────────────────────────
+*.apk
+*.aab
+*.ap_
+
+# ─── Testing ───────────────────────────────────────────────────
+/coverage/
+/.nyc_output/
+
+# ─── Environment & secrets ─────────────────────────────────────
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ─── IDE & editor ──────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.vscode-test/
+*.code-workspace
+
+# ─── OS generated ──────────────────────────────────────────────
 .DS_Store
-*.pem
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+._*
 
-# debug
+# ─── Logs ──────────────────────────────────────────────────────
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-
-# local server artifacts
+pnpm-debug.log*
+dev-out.log
+dev-err.log
 server-out.log
 server-err.log
 server.pid
-dev-out.log
-dev-err.log
+logs/
 
-# local tooling config (may contain secrets)
-opencode.json
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
+# ─── TypeScript / build cache ──────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+.turbo/
 
+# ─── Debug / profiling ─────────────────────────────────────────
+*.pem
+*.p12
+*.key
+*.cert
+
+# ─── Vercel ────────────────────────────────────────────────────
+.vercel/
+
+# ─── Misc / temp ───────────────────────────────────────────────
+/tmp/
 *.zip
+*.tar.gz
+*.rar
+*.7z
 
-# research papers (too large for git)
+# ─── Local tooling (may contain secrets) ───────────────────────
+opencode.json
+
+# ─── Research docs (too large for git) ─────────────────────────
 /docs/
 advanced_fitness_nutrition_research_compendium.md
+scripts/extract-papers.mjs

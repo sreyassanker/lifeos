@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <!-- White star centered in safe zone -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30L58.8,39.8L69.6,41.6L61.8,49.4L63.6,60.2L54,55L44.4,60.2L46.2,49.4L38.4,41.6L49.2,39.8Z" />
+</vector>

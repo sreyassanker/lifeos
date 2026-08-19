@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- LifeOS Brand Colors -->
+    <color name="colorPrimary">#10B981</color>
+    <color name="colorPrimaryDark">#059669</color>
+    <color name="colorAccent">#14B8A6</color>
+
+    <!-- Splash screen background -->
+    <color name="splash_background">#10B981</color>
+    <color name="ic_launcher_background">#10B981</color>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- LifeOS splash screen icon — white star on green background -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <!-- Star icon (same as web app logo) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28L58.8,37.8L69.6,39.6L61.8,47.4L63.6,58.2L54,53L44.4,58.2L46.2,47.4L38.4,39.6L49.2,37.8Z" />
+</vector>
