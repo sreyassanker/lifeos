@@ -5,7 +5,7 @@
 > version of it, plans what you should eat and how you should train to reach the body you
 > want — all still privacy-first, running in the browser, no account required.
 
-Status: **Built (v1 of all phases).** Phases 1–5 shipped: Body tab (full measurements → Navy body fat, shape, WHR, goal projection) · realistic 3D body now-vs-goal — a 19k-vertex MakeHuman mesh (CC0) deformed by your real measurements via MakeHuman's own measurement morphs (Three.js) · personalized meal plans for all diets with swaps + shopping list · exercise demos (local public-domain images + YouTube form links) · Today-tab command center with progress tracking. Remaining stretch items are in Phase 6.
+Status: **Built (v1 of phases 1–5, with 3D avatar removed).** Phases 1–5 shipped: Body tab (full measurements → Navy body fat, shape, WHR, goal projection) · personalized meal plans for all diets with swaps + shopping list · exercise demos (local public-domain images + YouTube form links) · Today-tab command center with progress tracking. The 3D body avatar (Three.js/MakeHuman) was removed to reduce bundle size; the body analysis and goal projection remain. Remaining stretch items are in Phase 6.
 
 ---
 
@@ -14,9 +14,9 @@ Status: **Built (v1 of all phases).** Phases 1–5 shipped: Body tab (full measu
 Today LifeOS gives everyone the same science. v2 makes it *personal*:
 
 1. **We know your body** — you enter measurements (waist, neck, hips, shoulders, weight, height).
-2. **We show your body** — a virtual silhouette rendered from your real measurements, plus
-   estimated body fat % and shape.
-3. **You pick your goal body** — target shape / body fat / weight. We show *now vs. goal* side by side.
+2. **We show your body** — estimated body fat %, shape, and health markers from your real measurements.
+   (The 3D avatar was removed in favor of a lighter-weight analysis approach.)
+3. **You pick your goal body** — target body fat % and weight. We project your timeline and goal measurements.
 4. **We plan your food** — a full day of natural, whole-food meals (breakfast, lunch, dinner,
    snacks) built from real food data to hit *your* calorie & macro targets.
 5. **We show you how to train** — every exercise in your plan comes with an animated
@@ -84,7 +84,7 @@ library, ExerciseDB API slots in easily.
 | Decision | Choice | Why |
 | --- | --- | --- |
 | Backend? | **No — keep client-only** (Next.js App Router + localStorage) | Matches the current privacy-first brand; personalization math all runs locally. A backend can be added later only if we need sync/accounts. |
-| Body visual | **Realistic 3D body mesh** (Three.js + React Three Fiber) | User chose 3D. 19k-vertex MakeHuman base mesh (CC0) + MakeHuman's own measurement morph targets (CC0) — male & female bases from MakeHuman gender macros; each entered measurement maps 1:1 onto the mesh via MakeHuman's canonical measurement rings (`scripts/build-body-assets.mjs`). The avatar ships dressed: clothes are offset shells built from the body mesh itself, so they deform with the measurements and each piece is recolored independently (shirt/pants/socks/shoes). |
+| Body visual | **Analysis only** (body fat %, shape, health markers) | The 3D avatar was removed to reduce bundle size. Body analysis and goal projection remain. |
 | Food data | **Bundled curated USDA subset** (public domain, attributed) | No keys, no server, offline, deterministic. |
 | Exercise media | **Bundled public-domain GIFs** + optional YouTube links | GIFs reliable & offline; YouTube adds real-life clarity. |
 | State | Extend existing `useLocalStorage` pattern | Consistent with the codebase. |
@@ -154,7 +154,7 @@ Each phase is independently shippable and builds on the previous.
 
 ### Phase 6 — Extras (stretch)
 
-- 3D body avatar (Three.js / React Three Fiber).
+- ~~3D body avatar~~ (removed — was too heavy for the bundle; body analysis + projection remain).
 - Open Food Facts barcode scanning to add foods to meals.
 - PWA install + offline (already natural — everything is local).
 - Weekly plan generation (7 days of meals with variety rotation).

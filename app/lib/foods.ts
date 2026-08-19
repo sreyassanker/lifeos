@@ -54,8 +54,6 @@ export const FOODS: Food[] = [
   f("tempeh", "Tempeh", "protein", 193, 19, 9, 11, 4, 100, "½ pack", ["vegetarian", "vegan"]),
   f("seitan", "Seitan", "protein", 147, 25, 8, 2, 0, 100, "palm-sized piece", ["vegetarian", "vegan"]),
   f("edamame", "Edamame (cooked)", "protein", 121, 12, 9, 5, 5, 100, "¾ cup shelled", ["vegetarian", "vegan"]),
-  f("whey-protein", "Whey protein powder", "protein", 400, 80, 8, 6, 0, 30, "1 scoop", ["vegetarian"]),
-  f("pea-protein", "Pea protein powder", "protein", 400, 75, 10, 6, 0, 30, "1 scoop", ["vegetarian", "vegan"]),
   f("nutritional-yeast", "Nutritional yeast", "protein", 380, 50, 32, 5, 16, 10, "2 tbsp", ["vegetarian", "vegan"]),
 
   // ── Legumes ──────────────────────────────────────────────────────────────
@@ -182,15 +180,15 @@ export const PROTEIN_POOL: Record<"omnivore" | "vegetarian" | "vegan", string[]>
   omnivore: [
     "chicken-breast", "turkey-breast", "beef-sirloin", "pork-tenderloin", "salmon", "tuna", "cod", "shrimp",
     "egg", "greek-yogurt-0", "cottage-cheese", "tofu", "tempeh", "lentils", "chickpeas", "black-beans",
-    "edamame", "whey-protein",
+    "edamame",
   ],
   vegetarian: [
     "egg", "greek-yogurt-0", "greek-yogurt-full", "cottage-cheese", "tofu", "tempeh", "lentils", "chickpeas",
-    "black-beans", "kidney-beans", "edamame", "peas", "whey-protein", "seitan",
+    "black-beans", "kidney-beans", "edamame", "peas", "seitan",
   ],
   vegan: [
     "tofu", "tempeh", "seitan", "lentils", "chickpeas", "black-beans", "kidney-beans", "white-beans",
-    "mung-beans", "soybeans", "edamame", "peas", "pea-protein",
+    "mung-beans", "soybeans", "edamame", "peas",
   ],
 };
 
@@ -234,7 +232,7 @@ export function foodExcluded(food: Food, allergies: string[]): boolean {
     if (!al) return false;
     if (food.name.toLowerCase().includes(al)) return true;
     if (al === "dairy" || al === "milk" || al === "lactose") {
-      return food.category === "dairy" || /whey/.test(food.name.toLowerCase());
+      return food.category === "dairy";
     }
     if (al === "nuts" || al === "nut" || al === "peanut" || al === "peanuts") {
       return food.category === "fat" && /almond|walnut|cashew|peanut|pumpkin|sunflower|sesame|hemp|tahini|chocolate|flax|chia/.test(food.name.toLowerCase());

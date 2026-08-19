@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import BodyAvatar3D from "@/app/components/BodyAvatar3D";
 import {
   bmi,
   bmiCategory,
@@ -18,8 +17,9 @@ import {
   weeksToReach,
 } from "@/app/lib/body";
 import type { Measurements } from "@/app/lib/body";
-import { DEFAULT_PROFILE, DIETS, macrosFor } from "@/app/lib/macros";
-import type { Diet, Profile } from "@/app/lib/macros";
+import { ACTIVITY_LEVELS, DEFAULT_PROFILE, DIETS, GOALS, macrosFor } from "@/app/lib/macros";
+import type { ActivityLevel, Diet, Goal, Profile } from "@/app/lib/macros";
+import { COUNTRIES, statesForCountry } from "@/app/lib/regions";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 
 const inputCls =
@@ -54,15 +54,12 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
   );
 }
 
-const CORE_FIELDS: { key: keyof Measurements; label: string }[] = [
+const MEASUREMENT_FIELDS: { key: keyof Measurements; label: string; hint?: string }[] = [
   { key: "neckCm", label: "Neck" },
   { key: "shoulderCm", label: "Shoulders" },
   { key: "chestCm", label: "Chest / bust" },
   { key: "waistCm", label: "Waist" },
   { key: "hipCm", label: "Hips" },
-];
-
-const OPTIONAL_FIELDS: { key: keyof Measurements; label: string }[] = [
   { key: "thighCm", label: "Thigh" },
   { key: "calfCm", label: "Calf" },
   { key: "kneeCm", label: "Knee" },
@@ -75,7 +72,6 @@ const OPTIONAL_FIELDS: { key: keyof Measurements; label: string }[] = [
 export default function BodyTab() {
   const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const [units, setUnits] = useState<"cm" | "in">("cm");
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [allergiesText, setAllergiesText] = useState(profile.allergies.join(", "));
 
   const measurements = useMemo(() => profile.measurements ?? {}, [profile.measurements]);
@@ -102,6 +98,8 @@ export default function BodyTab() {
       ),
     [measurements]
   );
+
+  const macros = macrosFor(profile);
 
   const bf = useMemo(
     () => (hasCore ? bodyFatNavy(measurements as Measurements, profile.sex, heightCm) : null),
@@ -136,7 +134,6 @@ export default function BodyTab() {
     if (targetWeight === null || bfForGoal === null) return null;
     return weeksToReach(weightKg, targetWeight, weeklyRateKg(profile.goal, weightKg));
   }, [targetWeight, bfForGoal, weightKg, profile.goal]);
-  const macros = macrosFor(profile);
 
   // Estimated goal measurements: scale each site toward the goal weight (central fat goes first).
   const goalMeasurements = useMemo<Measurements | undefined>(() => {
@@ -168,6 +165,164 @@ export default function BodyTab() {
 
   return (
     <div className="space-y-6">
+      {/* Profile basics */}
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
+          <span className="text-emerald-600 dark:text-emerald-400">👤</span>
+          Your profile
+        </h3>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Your age, size, and goals drive every calculation — macros, body fat, and the meal plan.
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Sex">
+            <div className="flex overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+              {(["male", "female"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setProfile((p) => ({ ...p, sex: s }))}
+                  className={`flex-1 px-3 py-2.5 text-xs font-bold transition ${
+                    profile.sex === s ? "bg-emerald-600 text-white" : "bg-zinc-50 text-zinc-500 dark:bg-zinc-900"
+                  }`}
+                >
+                  {s === "male" ? "♂ Male" : "♀ Female"}
+                </button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Age">
+            <input
+              type="number"
+              min={14}
+              max={100}
+              value={profile.age}
+              onChange={(e) => setProfile((p) => ({ ...p, age: Number(e.target.value) }))}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Weight (kg)">
+            <input
+              type="number"
+              min={30}
+              max={300}
+              value={profile.weightKg}
+              onChange={(e) => setProfile((p) => ({ ...p, weightKg: Number(e.target.value) }))}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Height (cm)">
+            <input
+              type="number"
+              min={120}
+              max={250}
+              value={profile.heightCm}
+              onChange={(e) => setProfile((p) => ({ ...p, heightCm: Number(e.target.value) }))}
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Activity level">
+            <select
+              value={profile.activity}
+              onChange={(e) => setProfile((p) => ({ ...p, activity: e.target.value as ActivityLevel }))}
+              className={inputCls}
+            >
+              {ACTIVITY_LEVELS.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Goal">
+            <select
+              value={profile.goal}
+              onChange={(e) => setProfile((p) => ({ ...p, goal: e.target.value as Goal }))}
+              className={inputCls}
+            >
+              {GOALS.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Country">
+            <select
+              value={profile.country}
+              onChange={(e) => setProfile((p) => ({ ...p, country: e.target.value, state: "" }))}
+              className={inputCls}
+            >
+              <option value="">Select your country</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {profile.country && statesForCountry(profile.country).length > 0 && (
+            <Field label="State / Region">
+              <select
+                value={profile.state}
+                onChange={(e) => setProfile((p) => ({ ...p, state: e.target.value }))}
+                className={inputCls}
+              >
+                <option value="">Select your state</option>
+                {statesForCountry(profile.country).map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          {ACTIVITY_LEVELS.find((a) => a.id === profile.activity)?.example} · Calories via Mifflin-St Jeor + activity factor.
+          {profile.country && (
+            <span> · Region: {COUNTRIES.find((c) => c.id === profile.country)?.label}{
+              profile.state && statesForCountry(profile.country).find((s) => s.id === profile.state)
+                ? ` — ${statesForCountry(profile.country).find((s) => s.id === profile.state)!.label}`
+                : ""
+            }</span>
+          )}
+        </p>
+
+        {/* Daily macros summary */}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Calories / day", value: `${macros.calories} kcal`, accent: true },
+            { label: "Protein", value: `${macros.proteinG} g`, sub: `range ${macros.proteinRange} g` },
+            { label: "Carbs", value: `${macros.carbsG} g` },
+            { label: "Fat", value: `${macros.fatG} g` },
+          ].map((m) => (
+            <div
+              key={m.label}
+              className={`rounded-xl border p-4 text-center ${
+                m.accent
+                  ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40"
+                  : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40"
+              }`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{m.label}</p>
+              <p
+                className={`mt-1 text-2xl font-extrabold ${
+                  m.accent ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-900 dark:text-white"
+                }`}
+              >
+                {m.value}
+              </p>
+              {m.sub && <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{m.sub}</p>}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">
+            💧 Water: <strong>{macros.waterL} L/day</strong> (NASEM adequate intake) · {macros.note}
+          </p>
+        </div>
+      </section>
+
       {/* Eating style + meals */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -228,42 +383,27 @@ export default function BodyTab() {
             <span className="text-emerald-600 dark:text-emerald-400">📏</span>
             Your measurements
           </h3>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-              {(["male", "female"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setProfile((p) => ({ ...p, sex: s }))}
-                  className={`px-3 py-1.5 text-xs font-bold transition ${
-                    profile.sex === s ? "bg-emerald-600 text-white" : "bg-zinc-50 text-zinc-500 dark:bg-zinc-900"
-                  }`}
-                >
-                  {s === "male" ? "♂ Male" : "♀ Female"}
-                </button>
-              ))}
-            </div>
-            <div className="flex overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-              {(["cm", "in"] as const).map((u) => (
-                <button
-                  key={u}
-                  onClick={() => setUnits(u)}
-                  className={`px-3 py-1.5 text-xs font-bold transition ${
-                    units === u ? "bg-emerald-600 text-white" : "bg-zinc-50 text-zinc-500 dark:bg-zinc-900"
-                  }`}
-                >
-                  {u}
-                </button>
-              ))}
-            </div>
+          <div className="flex overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+            {(["cm", "in"] as const).map((u) => (
+              <button
+                key={u}
+                onClick={() => setUnits(u)}
+                className={`px-3 py-1.5 text-xs font-bold transition ${
+                  units === u ? "bg-emerald-600 text-white" : "bg-zinc-50 text-zinc-500 dark:bg-zinc-900"
+                }`}
+              >
+                {u}
+              </button>
+            ))}
           </div>
         </div>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
           Wrap a tape measure snugly around each spot — neck at the Adam&apos;s apple, waist at your navel, hips at the
           widest point. Shoulders are the straight distance between the shoulder bones (biacromial width). The more
-          measurements you add, the more faithful your virtual body becomes. Re-measure weekly, same time of day.
+          measurements you add, the more accurate your analysis becomes. Re-measure weekly, same time of day.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          {CORE_FIELDS.map((f) => (
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {MEASUREMENT_FIELDS.map((f) => (
             <Field key={f.key} label={f.label} hint={f.key === "chestCm" ? (profile.sex === "female" ? "fullest part" : "nipple line") : undefined}>
               <input
                 type="number"
@@ -277,29 +417,6 @@ export default function BodyTab() {
             </Field>
           ))}
         </div>
-        <button
-          onClick={() => setShowAdvanced((v) => !v)}
-          className="mt-3 text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300"
-        >
-          {showAdvanced ? "Hide optional measurements" : "Add optional measurements (thighs, calves, knees, arms…) for a more detailed avatar"}
-        </button>
-        {showAdvanced && (
-          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {OPTIONAL_FIELDS.map((f) => (
-              <Field key={f.key} label={f.label}>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  value={displayValue(measurements[f.key])}
-                  onChange={(e) => setMeasurement(f.key, toCm(e.target.value))}
-                  placeholder={units === "cm" ? "cm" : "in"}
-                  className={inputCls}
-                />
-              </Field>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Body analysis */}
@@ -353,34 +470,6 @@ export default function BodyTab() {
         )}
       </section>
 
-      {/* Virtual body */}
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
-            <span className="text-emerald-600 dark:text-emerald-400">🧍</span>
-            Your virtual body
-          </h3>
-          <div className="flex items-center gap-3 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#d9a07a" }} /> Now
-            </span>
-            {goalMeasurements && (
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#d9a07a", opacity: 0.5 }} /> Goal
-              </span>
-            )}
-          </div>
-        </div>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          A realistic 3D body built from your real measurements (19k-vertex human mesh, all assets public domain). It
-          matches your {profile.sex === "male" ? "male" : "female"} profile and wears a sporty outfit. Drag to rotate.
-          The ghost shows your goal body.
-        </p>
-        <div className="mt-4">
-          <BodyAvatar3D now={hasCore ? (measurements as Measurements) : undefined} goal={goalMeasurements} heightCm={heightCm} weightKg={weightKg} sex={profile.sex} />
-        </div>
-      </section>
-
       {/* Goal */}
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <h3 className="flex items-center gap-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -431,7 +520,7 @@ export default function BodyTab() {
             </div>
             <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
               To get there you&apos;ll eat ≈ <strong>{macros.calories} kcal/day</strong> (P {macros.proteinG}g · C{" "}
-              {macros.carbsG}g · F {macros.fatG}g) — your personalized plan lives in the <strong>Nutrition</strong> tab.
+              {macros.carbsG}g · F {macros.fatG}g) — see your personalized meal plan in the <strong>Nutrition</strong> tab.
             </p>
           </>
         )}

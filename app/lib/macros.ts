@@ -1,8 +1,17 @@
 // Nutrition calculations, based on:
-// - Mifflin-St Jeor equation for BMR
+// - Mifflin-St Jeor equation for BMR (validated in multiple comparisons, remains the
+//   most accurate population-level equation for healthy adults)
 // - Protein: RDA 0.8 g/kg; sedentary 1.2 g/kg; muscle gain 1.6–2.2 g/kg;
-//   fat loss 1.6–2.2 g/kg (NASM) and 1.2–1.6 g/kg (2022 meta-analysis, PMC8978023)
+//   fat loss 1.8–2.2 g/kg (NASM; ACSM 2025 Position Stand recommends ≥1.6 g/kg
+//   for RT participants). Zhao et al. (2024) meta-analysis found protein supplementation
+//   significantly improved endurance performance (SMD 0.31) and muscle glycogen.
 // - Harvard Healthy Eating Plate for food guidance
+// - Female athletes: watch for RED-S (Relative Energy Deficiency in Sport) —
+//   ensure energy availability ≥45 kcal/kg FFM/day; monitor iron, calcium, vitamin D
+//   (Grabia et al. 2024). Vegan/vegetarian athletes may benefit from creatine
+//   supplementation (3–5 g/day monohydrate) due to lower baseline stores.
+//   (Gutiérrez-Hellín et al. 2025; Wang et al. 2024: +4.43 kg upper-body, +11.35 kg
+//   lower-body strength with creatine + RT in adults <50).
 
 export type Sex = "male" | "female";
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
@@ -25,6 +34,8 @@ export const DEFAULT_PROFILE: Profile = {
   diet: "omnivore",
   allergies: [],
   mealsPerDay: 4,
+  country: "",
+  state: "",
 };
 
 export interface Profile {
@@ -34,13 +45,17 @@ export interface Profile {
   heightCm: number;
   activity: ActivityLevel;
   goal: Goal;
-  /** Body measurements in cm — drives the virtual body, body fat %, and shape (Phase 1+). */
+  /** Body measurements in cm — drives body fat % and shape analysis. */
   measurements?: Partial<import("@/app/lib/body").Measurements>;
   /** Target body-fat % chosen in the Body tab — drives the goal avatar + projection. */
   targetBodyFat?: number;
   diet: Diet;
   allergies: string[];
   mealsPerDay: 3 | 4 | 5;
+  /** Country code (ISO 3166-1 alpha-2) — drives regional food availability and dietary guidance. */
+  country: string;
+  /** State / region code within the country — fine-tunes local food preferences. */
+  state: string;
 }
 
 export const ACTIVITY_LEVELS: { id: ActivityLevel; label: string; factor: number; example: string }[] = [
@@ -168,30 +183,4 @@ export const EVERYDAY_STARS: { name: string; why: string }[] = [
   { name: "Nuts & seeds", why: "Healthy fats and minerals — a small handful a day." },
 ];
 
-export interface MealIdea {
-  meal: string;
-  foods: string[];
-}
 
-export function mealIdeasFor(goal: Goal): MealIdea[] {
-  const highProtein = goal !== "maintain";
-  const breakfast = highProtein
-    ? ["Greek yogurt + berries + oats", "3-egg omelette with spinach + whole-wheat toast"]
-    : ["Oats with fruit and nuts", "Whole-grain toast + eggs + fruit"];
-  const lunch = highProtein
-    ? ["Chicken/grilled fish + quinoa + roasted vegetables", "Lentil or chickpea salad bowl + avocado"]
-    : ["Rice bowl with vegetables + tofu/egg", "Whole-grain sandwich + salad + yogurt"];
-  const dinner = highProtein
-    ? ["Salmon + brown rice + broccoli", "Lean meat stir-fry + vegetables + small rice"]
-    : ["Vegetable curry + whole grains", "Fish + potatoes + green vegetables"];
-  const snack = highProtein
-    ? ["Protein shake or cottage cheese", "Handful of almonds + fruit"]
-    : ["Fruit + nuts", "Carrot sticks + hummus"];
-
-  return [
-    { meal: "Breakfast", foods: breakfast },
-    { meal: "Lunch", foods: lunch },
-    { meal: "Dinner", foods: dinner },
-    { meal: "Snack", foods: snack },
-  ];
-}

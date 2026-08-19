@@ -3,9 +3,14 @@
 //   Accuracy ~±3% vs. DEXA — treat as a trend, not an absolute.
 // - BMI: weight/height², with its known limitation callout (doesn't distinguish muscle/fat).
 // - Shape: fashion/fitness conventions from bust/shoulder:waist:hip ratios — "tendency" labels.
-// - WHR & waist-to-height: evidence-based cardiometabolic risk markers (WHO/IDF; Ashwell).
+// - WHR & waist-to-height: evidence-based cardiometabolic risk markers.
+//   WHO 2008 consultation: WHR ≥0.90 (men) / ≥0.85 (women) = increased risk.
+//   Waist circumference: ≥94 cm (men) / ≥80 cm (women) = increased risk;
+//   ≥102 cm (men) / ≥88 cm (women) = substantially increased risk.
 // - Somatotype: informal frame tendency from wrist/ankle — NOT fixed biology (NASM, PMC12882503).
 // - Projection: fat-free mass preserved; ACSM fat loss 0.5–1% body weight/week.
+// - Mobile AI body composition (Poltronieri et al. 2026): emerging methods using
+//   smartphone cameras may improve accessibility of body composition tracking.
 
 import type { Goal } from "@/app/lib/macros";
 
@@ -23,12 +28,6 @@ export interface Measurements {
   upperArmCm?: number; // circumference
   forearmCm?: number; // circumference
 }
-
-// ---- Avatar outfit ----------------------------------------------------------
-// The 3D body ships dressed. Each outfit part is its own mesh (derived from the
-// body itself, so it deforms with the measurements) with its own color, saved
-// per-user in the profile and applied to both the male and female bodies.
-export type ClothingPartId = "shirt" | "pants" | "shoes";
 
 export type BodyShapeId =
   | "hourglass"

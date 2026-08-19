@@ -1,16 +1,22 @@
-// Six-pack / core training data, based on:
-// - Body-fat thresholds for visible abs: ~10–12% men, ~16–20% women (Healthline, Built With Science)
-// - Diet is what reveals abs; training is what develops them (spot reduction is a myth)
-// - Science-based ab workout (Built With Science / Jeremy Ethier): reverse crunch (lower abs),
-//   woodchoppers or bicycle crunches (obliques, ACE high activation), weighted crunches (upper abs),
-//   serratus jabs — 1–3x/week, 2x/week is a good start, NOT daily
-// - Healthline core programming: 2–3x/week, static + dynamic exercises across 3 planes
-// - 7+ hours sleep, weights + cardio, high fruit/veg/lean protein, water over sugary drinks
-// - Demo images: public-domain exercise dataset (yuhonas/free-exercise-db), stored locally.
+// Bodyweight-only fitness plan — no equipment, indoor, science-based.
+//
+// Sources:
+// - ACSM 2025 Position Stand (Currier et al., Med Sci Sports Exerc 2026;58:851-872):
+//   137 systematic reviews (>30,000 participants).
+//   Strength: ≥80% 1RM, full ROM, 2–3 sets, ≥2 sessions/wk.
+//   Hypertrophy: ≥10 sets/muscle group/week; load range doesn't matter.
+//   Power: moderate loads (30–70% 1RM), ≤24 reps/set, fast concentric.
+//   Training to failure NOT required — 2–3 RIR is sufficient.
+// - Body-fat thresholds for visible abs: ~10–12% men, ~16–20% women.
+// - Diet reveals abs; training builds them (spot reduction is a myth).
+// - Core programming: 2–3x/week, static + dynamic across 3 planes (Healthline).
+// - Demo videos: curated from authentic YouTube fitness channels.
 
 export interface ExerciseDemo {
-  img: string;
-  youtube?: string;
+  /** YouTube video ID for in-app embed */
+  videoId: string;
+  /** Channel / creator name */
+  creator: string;
   note?: string;
 }
 
@@ -20,12 +26,12 @@ export interface Exercise {
   setsReps: string;
   rest: string;
   form: string;
-  demo?: ExerciseDemo;
+  demo: ExerciseDemo;
 }
 
 export interface PlanItem {
   text: string;
-  demo?: ExerciseDemo | ExerciseDemo[];
+  demo?: ExerciseDemo;
 }
 
 export interface DayPlan {
@@ -33,154 +39,6 @@ export interface DayPlan {
   title: string;
   items: PlanItem[];
 }
-
-export const AB_CIRCUIT: Exercise[] = [
-  {
-    name: "Reverse Crunch",
-    target: "Lower abs (rectus abdominis, lower region)",
-    setsReps: "2–3 sets × 15–20 reps (bodyweight) → build up to weighted/decline 10–15 reps",
-    rest: "60–90s",
-    form:
-      "Start with a posterior pelvic tilt: squeeze glutes, flatten your lower back. Curl your pelvis toward your belly button — don't just swing your legs. Highest lower-ab activation when done with this form.",
-    demo: { img: "/exercises/Reverse_Crunch.jpg", youtube: "reverse crunch form" },
-  },
-  {
-    name: "High-to-Low Cable Woodchoppers",
-    target: "Obliques (rotational)",
-    setsReps: "2–3 sets × 10–15 reps per side",
-    rest: "60–90s",
-    form:
-      "Arms extended, elbows locked; rotate your torso down and across toward the opposite knee using your obliques, not your arms. Alternative: bicycle crunches 2–3 sets to failure (ACE-rated high oblique activation).",
-    demo: {
-      img: "/exercises/Cable_Russian_Twists.jpg",
-      youtube: "cable woodchopper exercise form",
-      note: "Demo shows a rotational oblique movement — the woodchopper pattern is the same rotation, top-down.",
-    },
-  },
-  {
-    name: "Weighted Crunches",
-    target: "Upper abs",
-    setsReps: "2–3 sets × 10–15 reps",
-    rest: "60–90s",
-    form:
-      "Stability-ball or cable crunch. Bring the rib cage forward and down toward the pelvis; hips stay still. Progressively add weight — abs grow like any other muscle.",
-    demo: { img: "/exercises/Cable_Crunch.jpg", youtube: "cable crunch form" },
-  },
-  {
-    name: "Serratus Jabs",
-    target: "Serratus anterior (rib definition)",
-    setsReps: "2–3 sets × 10–15 reps per side",
-    rest: "60s",
-    form:
-      "Band or cable punching motion upward; reach fully at the end to protract the scapula. EMG studies show very high serratus activation.",
-    demo: {
-      img: "/exercises/Straight-Arm_Dumbbell_Pullover.jpg",
-      youtube: "serratus punch exercise",
-      note: "Demo shows a straight-arm pullover — the same serratus emphasis via full scapular protraction.",
-    },
-  },
-];
-
-export const WEEK_PLAN: DayPlan[] = [
-  {
-    day: "Monday",
-    title: "Full-body strength + abs",
-    items: [
-      {
-        text: "Squats (or lunges) 3×8–12",
-        demo: [
-          { img: "/exercises/Barbell_Squat.jpg", youtube: "squat form" },
-          { img: "/exercises/Bodyweight_Walking_Lunge.jpg", youtube: "walking lunge form" },
-        ],
-      },
-      { text: "Push-ups (or bench press) 3×8–12", demo: { img: "/exercises/Pushups.jpg", youtube: "push up form" } },
-      { text: "Bent-over rows 3×8–12", demo: { img: "/exercises/Bent_Over_Barbell_Row.jpg", youtube: "bent over row form" } },
-      { text: "Plank 3×30–60s hold", demo: { img: "/exercises/Plank.jpg", youtube: "plank form" } },
-      { text: "AB CIRCUIT (4 exercises above)" },
-    ],
-  },
-  {
-    day: "Tuesday",
-    title: "Cardio + mobility",
-    items: [
-      {
-        text: "30–40 min brisk walk / jog / cycling (zone 2)",
-        demo: [
-          { img: "/exercises/Bicycling.jpg", youtube: "cycling zone 2" },
-          { img: "/exercises/Jogging_Treadmill.jpg", youtube: "jogging form" },
-        ],
-      },
-      { text: "10 min stretching — hips, hamstrings, shoulders" },
-    ],
-  },
-  {
-    day: "Wednesday",
-    title: "Full-body strength + abs",
-    items: [
-      {
-        text: "Hip hinge (deadlift/glute bridge) 3×8–12",
-        demo: [
-          { img: "/exercises/Barbell_Deadlift.jpg", youtube: "deadlift form" },
-          { img: "/exercises/Barbell_Glute_Bridge.jpg", youtube: "glute bridge form" },
-        ],
-      },
-      { text: "Overhead press 3×8–12", demo: { img: "/exercises/Standing_Military_Press.jpg", youtube: "overhead press form" } },
-      {
-        text: "Pull-ups or lat pulldowns 3×6–10",
-        demo: [
-          { img: "/exercises/Pullups.jpg", youtube: "pull up form" },
-          { img: "/exercises/Wide-Grip_Lat_Pulldown.jpg", youtube: "lat pulldown form" },
-        ],
-      },
-      { text: "Side planks 3×20–40s per side", demo: { img: "/exercises/Side_Bridge.jpg", youtube: "side plank form" } },
-      { text: "AB CIRCUIT (4 exercises above)" },
-    ],
-  },
-  {
-    day: "Thursday",
-    title: "Active recovery",
-    items: [
-      { text: "20–30 min easy walk or yoga flow", demo: { img: "/exercises/Walking_Treadmill.jpg", youtube: "gentle yoga flow" } },
-      { text: "Optional: 5,000–8,000 steps total" },
-    ],
-  },
-  {
-    day: "Friday",
-    title: "Full-body strength + abs",
-    items: [
-      { text: "Squats 3×8–12 (add weight vs Monday)", demo: { img: "/exercises/Barbell_Squat.jpg", youtube: "squat form" } },
-      {
-        text: "Push-ups / bench 3×8–12 (add reps or weight)",
-        demo: { img: "/exercises/Pushups.jpg", youtube: "push up form" },
-      },
-      { text: "Rows 3×8–12", demo: { img: "/exercises/Bent_Over_Barbell_Row.jpg", youtube: "bent over row form" } },
-      { text: "Dead bug 3×10–12 per side (deep core)", demo: { img: "/exercises/Dead_Bug.jpg", youtube: "dead bug exercise" } },
-      { text: "AB CIRCUIT (4 exercises above)" },
-    ],
-  },
-  {
-    day: "Saturday",
-    title: "Cardio + steps",
-    items: [
-      {
-        text: "40–60 min cardio you enjoy (run, swim, sport)",
-        demo: [
-          { img: "/exercises/Jogging_Treadmill.jpg", youtube: "jogging form" },
-          { img: "/exercises/Rowing_Stationary.jpg", youtube: "rowing machine form" },
-        ],
-      },
-      { text: "Aim for 8,000–10,000 steps" },
-    ],
-  },
-  {
-    day: "Sunday",
-    title: "Full rest",
-    items: [
-      { text: "Rest — recovery is when muscles grow" },
-      { text: "Consistent sleep and protein today matter as much as training" },
-    ],
-  },
-];
 
 export const KEY_FACTS: { fact: string; detail: string }[] = [
   {
@@ -201,7 +59,7 @@ export const KEY_FACTS: { fact: string; detail: string }[] = [
   {
     fact: "Progressive overload applies to abs too",
     detail:
-      "Treat abs like biceps: add weight, reps, or harder variations over time (weighted crunches, decline reverse crunches) to keep growing.",
+      "Treat abs like biceps: add reps, harder variations (decline reverse crunches, hanging leg raises) over time to keep growing.",
   },
   {
     fact: "Sleep and stress affect your abs",
@@ -212,6 +70,21 @@ export const KEY_FACTS: { fact: string; detail: string }[] = [
     fact: "Protein protects muscle while you cut",
     detail:
       "In a deficit, eat 1.8–2.2 g protein per kg of body weight daily to lose fat while keeping (or building) muscle.",
+  },
+  {
+    fact: "You don't need to train to failure",
+    detail:
+      "ACSM 2025 Position Stand (137 reviews, >30k participants): training to failure does NOT enhance strength, hypertrophy, or power. 2–3 reps in reserve (RIR) is sufficient for full benefits.",
+  },
+  {
+    fact: "Volume matters more than load for hypertrophy",
+    detail:
+      "ACSM 2025: muscle hypertrophy is enhanced by ≥10 sets per muscle group per week. Load range (30–100% 1RM) doesn't matter — total volume is the key driver.",
+  },
+  {
+    fact: "RT is safe for all ages",
+    detail:
+      "ACSM 2025: analysis of >38,000 participants (>6,700 RT) found RT does not increase serious adverse events. Nonserious adverse events occur at similar rates to aerobic exercise.",
   },
 ];
 
@@ -225,4 +98,254 @@ export const BODY_FAT_LEVELS: BodyFatEstimate[] = [
   { label: "Visible six-pack", men: "~10–12%", women: "~16–20%" },
   { label: "Athletic / lean", men: "~12–15%", women: "~20–24%" },
   { label: "Healthy normal range", men: "17.6–25.3%", women: "28.8–35.7%" },
+];
+
+// ── Weekly plan (bodyweight-only, no equipment, indoor) ────────────────────
+// Core/ab exercises are merged directly into each strength day — no separate section.
+
+export const WEEK_PLAN: DayPlan[] = [
+  // ── Monday: Upper Push + Core ────────────────────────────────────────────
+  {
+    day: "Monday",
+    title: "Upper push + core",
+    items: [
+      {
+        text: "Push-ups — 3 × 12–20 (chest, shoulders, triceps)",
+        demo: {
+          videoId: "c-lBErfxszs",
+          creator: "Davis Diley / ATHLEAN-X",
+          note: "Hands under shoulders, full range of motion. Keep core tight — no sagging hips.",
+        },
+      },
+      {
+        text: "Diamond push-ups — 3 × 8–12 (triceps, inner chest)",
+        demo: {
+          videoId: "YEdjByGD_A4",
+          creator: "Frayzo Fitness",
+          note: "Hands together under chest forming a diamond. Elbows stay close to your body.",
+        },
+      },
+      {
+        text: "Pike push-ups — 3 × 8–12 (shoulders)",
+        demo: {
+          videoId: "89-8waE2XKI",
+          creator: "STRIQfit",
+          note: "Feet elevated, hips high — press your head toward the floor. Targets deltoids like an overhead press.",
+        },
+      },
+      {
+        text: "Tricep dips (chair) — 3 × 10–15 (triceps)",
+        demo: {
+          videoId: "4ua3MzaU0QU",
+          creator: "Andrew Kwong (DeltaBolic)",
+          note: "Hands on chair edge, lower until elbows are ~90°. Keep back close to the chair.",
+        },
+      },
+      {
+        text: "Plank — 3 × 30–60s (core stability)",
+        demo: {
+          videoId: "xe2MXatLTUw",
+          creator: "Andrew Kwong (DeltaBolic)",
+          note: "Forearms on ground, body in a straight line. Squeeze glutes and brace abs — don't hold your breath.",
+        },
+      },
+      {
+        text: "Dead bug — 3 × 10/side (deep core, coordination)",
+        demo: {
+          videoId: "DqLL45uk2Tk",
+          creator: "Derek Ward",
+          note: "Lie on your back, arms up, knees bent 90°. Extend opposite arm + leg while keeping lower back flat on the floor.",
+        },
+      },
+    ],
+  },
+
+  // ── Tuesday: Cardio + Mobility ───────────────────────────────────────────
+  {
+    day: "Tuesday",
+    title: "Cardio + mobility",
+    items: [
+      {
+        text: "Jump rope (simulated) — 30–40 min zone 2 (heart rate 60–70% max)",
+        demo: {
+          videoId: "5q4qOTTvnYM",
+          creator: "Coach Kozak / HASfit",
+          note: "No rope needed — just bounce on the balls of your feet with the same arm motion. Stay relaxed.",
+        },
+      },
+      {
+        text: "Full body stretching flow — 10 min cooldown",
+        demo: {
+          videoId: "KrUnq66qn_k",
+          creator: "Yoga With Adriene",
+          note: "Focus on hips, hamstrings, shoulders. Hold each stretch 20–30s, breathe deeply.",
+        },
+      },
+    ],
+  },
+
+  // ── Wednesday: Lower Body + Core ─────────────────────────────────────────
+  {
+    day: "Wednesday",
+    title: "Lower body + core",
+    items: [
+      {
+        text: "Bodyweight squats — 3 × 15–20 (quads, glutes)",
+        demo: {
+          videoId: "PPmvh7gBTi0",
+          creator: "Jeff Nippard",
+          note: "Feet shoulder-width, push knees out over toes, descend until thighs are parallel or below.",
+        },
+      },
+      {
+        text: "Reverse lunges — 3 × 10/side (quads, glutes, balance)",
+        demo: {
+          videoId: "38xlLGfguz4",
+          creator: "Oliver Sjostrom",
+          note: "Step back, lower until both knees are ~90°. Front knee tracks over the second toe.",
+        },
+      },
+      {
+        text: "Single-leg glute bridge — 3 × 12/side (glutes, hamstrings)",
+        demo: {
+          videoId: "4ilXaDauMnE",
+          creator: "Bret Contreras",
+          note: "Lie on your back, one foot flat, extend the other leg. Drive through the heel to lift hips.",
+        },
+      },
+      {
+        text: "Calf raises (standing) — 3 × 15–20 (calves)",
+        demo: {
+          videoId: "baEXLy09Ncc",
+          creator: "Jeff Nippard",
+          note: "Rise onto balls of feet, pause 1s at the top, lower slowly (3s eccentric). Full range of motion.",
+        },
+      },
+      {
+        text: "Side plank — 3 × 30–40s/side (obliques, core stability)",
+        demo: {
+          videoId: "TSXVcb2Wc9k",
+          creator: "ATHLEAN-X",
+          note: "Forearm on ground, body in a straight line from head to feet. Stack or stagger your feet.",
+        },
+      },
+      {
+        text: "Bicycle crunch — 3 × 15/side (obliques, rectus abdominis)",
+        demo: {
+          videoId: "cFDS2S6Vqis",
+          creator: "Go with JO FITNESS",
+          note: "Don't pull on your neck — hands lightly behind ears. Rotate torso, bring elbow toward opposite knee.",
+        },
+      },
+    ],
+  },
+
+  // ── Thursday: Active Recovery ────────────────────────────────────────────
+  {
+    day: "Thursday",
+    title: "Active recovery",
+    items: [
+      {
+        text: "Gentle yoga / mobility flow — 20–30 min",
+        demo: {
+          videoId: "2IcWJobNDck",
+          creator: "Yoga With Adriene",
+          note: "Move slowly, breathe deeply. Focus on areas that feel tight from the week.",
+        },
+      },
+      {
+        text: "Optional: aim for 5,000–8,000 steps total today",
+      },
+    ],
+  },
+
+  // ── Friday: Upper Back / Hinge + Core ────────────────────────────────────
+  {
+    day: "Friday",
+    title: "Upper back / hinge + core",
+    items: [
+      {
+        text: "Superman hold — 3 × 12–15 (erector spinae, glutes)",
+        demo: {
+          videoId: "ydT74SAts7M",
+          creator: "ATHLEAN-X",
+          note: "Lie face down, arms extended overhead. Lift arms + legs simultaneously, hold 2–3s, lower slowly.",
+        },
+      },
+      {
+        text: "Bird-dog — 3 × 10/side (core stability, coordination)",
+        demo: {
+          videoId: "pS-SfFoc8uk",
+          creator: "Squat University",
+          note: "Hands under shoulders, knees under hips. Extend opposite arm + leg, hold 2s. Keep hips level — no rotation.",
+        },
+      },
+      {
+        text: "Reverse crunch — 3 × 15–20 (lower abs)",
+        demo: {
+          videoId: "0BNhpx_nxDM",
+          creator: "Jeff Nippard",
+          note: "Lie on your back, knees bent. Curl pelvis toward chest — don't swing your legs. Squeeze at the top.",
+        },
+      },
+      {
+        text: "Mountain climbers — 3 × 30s (cardio + core)",
+        demo: {
+          videoId: "0LvR42Z599c",
+          creator: "Romane Lanceford",
+          note: "Push-up position, drive knees toward chest alternately at a controlled pace. Keep hips level.",
+        },
+      },
+    ],
+  },
+
+  // ── Saturday: Full Body HIIT + Core ──────────────────────────────────────
+  {
+    day: "Saturday",
+    title: "Full body HIIT + core",
+    items: [
+      {
+        text: "Burpees — 3 × 10 (full body, cardio)",
+        demo: {
+          videoId: "1KOttLvp4lU",
+          creator: "Calisthenics Workout Complex",
+          note: "Drop to push-up, jump feet to hands, explode up. Scale by stepping back instead of jumping.",
+        },
+      },
+      {
+        text: "Jumping jacks — 3 × 30s (cardio, coordination)",
+        demo: {
+          videoId: "6q68oE6984E",
+          creator: "HASfit (Coach Kozak)",
+          note: "Land softly on balls of feet. Keep a steady pace — this is zone 2 cardio, not a sprint.",
+        },
+      },
+      {
+        text: "High knees — 3 × 30s (cardio, hip flexors)",
+        demo: {
+          videoId: "MtR8N6lvCSk",
+          creator: "HASfit (Coach Kozak)",
+          note: "Drive knees to hip height, pump arms. Stay on the balls of your feet. Controlled pace.",
+        },
+      },
+      {
+        text: "Wall sit — 3 × 30–45s (quads, mental toughness)",
+        demo: {
+          videoId: "mDdLC-yKudY",
+          creator: "YOGABODY",
+          note: "Back flat against wall, thighs parallel to floor. Press your lower back into the wall.",
+        },
+      },
+    ],
+  },
+
+  // ── Sunday: Full Rest ────────────────────────────────────────────────────
+  {
+    day: "Sunday",
+    title: "Full rest",
+    items: [
+      { text: "Rest — recovery is when muscles grow" },
+      { text: "Consistent sleep and protein today matter as much as training" },
+    ],
+  },
 ];

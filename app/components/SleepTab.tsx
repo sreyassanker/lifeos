@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   SLEEP_HYGIENE,
   SLEEP_NEEDS,
@@ -45,8 +45,8 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
 }
 
 export default function SleepTab() {
-  const [wake, setWake] = useState("07:00");
-  const [bed, setBed] = useState("23:00");
+  const [wake, setWake] = useLocalStorage<string>("lifeos-wake", "07:00");
+  const [bed, setBed] = useLocalStorage<string>("lifeos-bed", "23:00");
   const [checked, setChecked] = useLocalStorage<Record<string, boolean>>("lifeos-sleep-hygiene", {});
 
   const bedtimes = useMemo(() => (wake ? bedtimesForWake(wake) : []), [wake]);

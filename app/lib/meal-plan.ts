@@ -7,6 +7,8 @@
 import type { Food } from "@/app/lib/foods";
 import { foodById, foodExcluded, FRUIT_POOL, GRAIN_POOL, PROTEIN_POOL, VEG_POOL, FAT_POOL } from "@/app/lib/foods";
 import type { Diet, MacroResult } from "@/app/lib/macros";
+import type { Region } from "@/app/lib/regions";
+import { guidanceForRegion } from "@/app/lib/regions";
 
 export type MealSlot = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -48,10 +50,15 @@ function rng(seed: number) {
 
 const pick = <T>(rand: () => number, arr: T[]): T => arr[Math.floor(rand() * arr.length)];
 
-function filteredPool(diet: Diet, allergies: string[], ids: string[]): Food[] {
+function filteredPool(diet: Diet, allergies: string[], ids: string[], region: Region = "global"): Food[] {
+  const g = guidanceForRegion(region);
+  const staples = new Set([...g.stapleProteins, ...g.stapleGrains, ...g.stapleVeg, ...g.stapleFats]);
+
+  // Filter by allergies, then sort: regional staples first.
   const base = ids
     .map(foodById)
-    .filter((f): f is Food => f !== undefined && !foodExcluded(f, allergies));
+    .filter((f): f is Food => f !== undefined && !foodExcluded(f, allergies))
+    .sort((a, b) => (staples.has(b.id) ? 1 : 0) - (staples.has(a.id) ? 1 : 0));
   // Never let an allergy empty a pool — fall back to any diet-compatible food.
   if (base.length > 0) return base;
   return ids.map(foodById).filter((f): f is Food => f !== undefined);
@@ -81,9 +88,9 @@ const sumTotals = (totals: MealTotals[]): MealTotals =>
 const round5 = (n: number) => Math.max(0, Math.round(n / 5) * 5);
 
 const BREAKFAST_PROTEIN: Record<Diet, string[]> = {
-  omnivore: ["egg", "greek-yogurt-0", "cottage-cheese", "whey-protein", "tofu"],
-  vegetarian: ["egg", "greek-yogurt-0", "cottage-cheese", "whey-protein", "tofu"],
-  vegan: ["tofu", "tempeh", "pea-protein"],
+  omnivore: ["egg", "greek-yogurt-0", "cottage-cheese", "tofu"],
+  vegetarian: ["egg", "greek-yogurt-0", "cottage-cheese", "tofu"],
+  vegan: ["tofu", "tempeh", "edamame"],
 };
 
 const BREAKFAST_GRAIN: Record<Diet, string[]> = {
@@ -120,17 +127,18 @@ function buildMainMeal(
   allergies: string[],
   share: number,
   targets: MacroResult,
-  isBreakfast: boolean
+  isBreakfast: boolean,
+  region: Region = "global"
 ): PlannedMeal {
   const mealCal = targets.calories * share;
   const mealProtein = targets.proteinG * share;
   const mealCarbs = targets.carbsG * share;
 
-  const proteinPool = filteredPool(diet, allergies, isBreakfast ? BREAKFAST_PROTEIN[diet] : PROTEIN_POOL[diet]);
-  const grainPool = filteredPool(diet, allergies, isBreakfast ? BREAKFAST_GRAIN[diet] : GRAIN_POOL[diet]);
-  const vegPool = filteredPool(diet, allergies, VEG_POOL);
-  const fruitPool = filteredPool(diet, allergies, FRUIT_POOL);
-  const fatPool = filteredPool(diet, allergies, FAT_POOL);
+  const proteinPool = filteredPool(diet, allergies, isBreakfast ? BREAKFAST_PROTEIN[diet] : PROTEIN_POOL[diet], region);
+  const grainPool = filteredPool(diet, allergies, isBreakfast ? BREAKFAST_GRAIN[diet] : GRAIN_POOL[diet], region);
+  const vegPool = filteredPool(diet, allergies, VEG_POOL, region);
+  const fruitPool = filteredPool(diet, allergies, FRUIT_POOL, region);
+  const fatPool = filteredPool(diet, allergies, FAT_POOL, region);
 
   const p = pick(rand, proteinPool);
   const v = pick(rand, vegPool);
@@ -174,12 +182,11 @@ function buildMainMeal(
   };
 }
 
-function buildSnack(rand: () => number, diet: Diet, allergies: string[]): PlannedMeal {
-  const fruitPool = filteredPool(diet, allergies, FRUIT_POOL);
-  const fatPool = filteredPool(diet, allergies, FAT_POOL);
-  const dairyPool = filteredPool(diet, allergies, ["greek-yogurt-0", "greek-yogurt-full", "cottage-cheese"]);
-  const shakePool = filteredPool(diet, allergies, ["whey-protein", "pea-protein"]);
-  const milkPool = filteredPool(diet, allergies, ["milk-2", "soy-milk", "oat-milk"]);
+function buildSnack(rand: () => number, diet: Diet, allergies: string[], region: Region = "global"): PlannedMeal {
+  const fruitPool = filteredPool(diet, allergies, FRUIT_POOL, region);
+  const fatPool = filteredPool(diet, allergies, FAT_POOL, region);
+  const dairyPool = filteredPool(diet, allergies, ["greek-yogurt-0", "greek-yogurt-full", "cottage-cheese"], region);
+  const milkPool = filteredPool(diet, allergies, ["milk-2", "soy-milk", "oat-milk"], region);
 
   const template = Math.floor(rand() * 3);
   const fruit = pick(rand, fruitPool);
@@ -192,14 +199,14 @@ function buildSnack(rand: () => number, diet: Diet, allergies: string[]): Planne
       { foodId: dairy.id, grams: 170 },
       { foodId: fruit.id, grams: 120 },
     ];
-  } else if (template === 1 && shakePool.length > 0) {
-    // Protein shake + fruit
-    const shake = pick(rand, shakePool);
+  } else if (template === 1) {
+    // Milk + fruit + nuts (whole-food shake)
     const milk = pick(rand, milkPool);
+    const fat = pick(rand, fatPool);
     items = [
-      { foodId: shake.id, grams: 30 },
       { foodId: milk.id, grams: 240 },
-      { foodId: fruit.id, grams: 100 },
+      { foodId: fruit.id, grams: 120 },
+      { foodId: fat.id, grams: 20 },
     ];
   } else {
     // Nuts/seeds + fruit
@@ -218,14 +225,15 @@ export function planDay(
   diet: Diet,
   allergies: string[],
   mealsPerDay: number,
-  seed: number
+  seed: number,
+  region: Region = "global"
 ): MealPlan {
   const rand = rng(seed);
   const slots = SHARES[mealsPerDay] ?? SHARES[4];
 
   const meals: PlannedMeal[] = slots.map(({ slot, share }) => {
-    if (slot === "snack") return buildSnack(rand, diet, allergies);
-    return buildMainMeal(rand, diet, allergies, share, targets, slot === "breakfast");
+    if (slot === "snack") return buildSnack(rand, diet, allergies, region);
+    return buildMainMeal(rand, diet, allergies, share, targets, slot === "breakfast", region);
   });
 
   // Fix the main-meal slot labels (breakfast/dinner naming) post-hoc for clarity.

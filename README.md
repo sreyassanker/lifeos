@@ -9,7 +9,7 @@ Built with **Next.js 16** (App Router), **React 19**, **TypeScript**, and **Tail
 | Tab | Tools |
 | --- | ----- |
 | **Today** | Command center: sleep target, calories, water tracker, habit quick-check, today's workout, **today's meal plan**, and **weekly progress tracking** (weight/waist/body-fat trend chart) |
-| **Body** | Personalization hub: measurements (cm/in, incl. thighs, calves, knees, arms, wrists) → **body fat % (US Navy method)**, body shape, waist-to-hip & waist-to-height health markers, diet/allergy/meals-per-day setup, **realistic 3D virtual body** — a 19k-vertex human mesh deformed by your real measurements (now vs. goal, drag to rotate), dressed in a recolorable sporty outfit (shirt/pants/socks/shoes), goal body-fat slider with weight & timeline projection |
+| **Body** | Personalization hub: measurements (cm/in, incl. thighs, calves, knees, arms, wrists) → **body fat % (US Navy method)**, body shape, waist-to-hip & waist-to-height health markers, diet/allergy/meals-per-day setup, goal body-fat slider with weight & timeline projection |
 | **Sleep** | Sleep cycle calculator (90-min cycles → optimal bed/wake times), best sleeping position guide, interactive sleep hygiene checklist |
 | **Routine** | 3-question chronotype quiz → personalized time-blocked daily schedule, daily habit tracker (saved locally), habit-formation science |
 | **Nutrition** | Macro calculator (Mifflin-St Jeor BMR + activity + goal), **personalized meal plan** (breakfast/lunch/dinner/snacks from ~140 natural whole foods, sized to your macros, diet- and allergy-aware, swappable, with day totals and an auto shopping list), Harvard Healthy Eating Plate guide, everyday foods |
@@ -22,7 +22,6 @@ Built with **Next.js 16** (App Router), **React 19**, **TypeScript**, and **Tail
 - **Nutrition:** Mifflin-St Jeor for BMR; protein 1.6–2.2 g/kg for muscle gain/fat loss (NASM, 2022 meta-analysis PMC8978023); Harvard Healthy Eating Plate.
 - **Fitness:** body fat ~10–12% (men) / ~16–20% (women) for visible abs; diet reveals abs, training develops them; EMG-based ab exercise selection (Built With Science, ACE, Healthline).
 - **Body:** US Navy circumference body-fat method (DoD/CDC, ±3%); WHO waist-to-hip risk thresholds (≥0.90 men / ≥0.85 women); waist-to-height <0.5 target (Ashwell); sustainable rates — fat loss 0.5–1% body weight/week (ACSM), lean gains ~0.25–0.5 kg/wk; somatotypes presented as informal tendencies, not fixed biology.
-- **Virtual body:** MakeHuman base mesh + measurement morph targets (both CC0/public domain, makehumancommunity/makehuman); male and female base bodies from MakeHuman's gender macros; measurements map 1:1 onto the mesh via MakeHuman's own measurement rings (`scripts/build-body-assets.mjs` rebuilds `public/body/body-male.json` + `body-female.json`). The avatar ships dressed — clothes are built from the body mesh itself (offset shells along the body normals), so they deform with the measurements and each piece (shirt/pants/socks/shoes) is a separate mesh with its own color.
 - **Meal plans:** template-based plate method (Harvard plate) sized to individual calorie/macro targets; food values from USDA FoodData Central (public domain).
 - **Exercise demos:** public-domain exercise dataset (yuhonas/free-exercise-db), images stored locally; YouTube "form search" links.
 
@@ -48,7 +47,6 @@ app/
 │   ├── LifeOsApp.tsx      # Tab shell (Today / Body / Sleep / Routine / Nutrition / Fitness)
 │   ├── DashboardTab.tsx   # Command center: stats, meal plan, workout, progress chart
 │   ├── BodyTab.tsx        # Measurements, body analysis, goal body, diet setup
-│   ├── BodyAvatar3D.tsx   # Realistic 3D body: MakeHuman mesh + measurement morphs (Three.js / R3F)
 │   ├── SleepTab.tsx       # Cycle calculator, positions, hygiene checklist
 │   ├── RoutineTab.tsx     # Chronotype quiz, ideal schedule, habit tracker
 │   ├── NutritionTab.tsx   # Profile → macros, personalized meal plan, shopping list
@@ -65,14 +63,12 @@ app/
 │   ├── use-local-state.ts # localStorage-backed state hook
 │   └── utils.ts
 ├── public/exercises/      # Public-domain exercise demo images
-├── public/body/           # MakeHuman body meshes + measurement morphs (CC0): body-male.json, body-female.json (built by scripts/build-body-assets.mjs)
-├── data/makehuman/        # CC0 source assets (base.obj, gender-*.target, measure-*.target) used to build the bodies
 ├── globals.css
 ├── layout.tsx
 └── page.tsx
 ```
 
-> **Roadmap:** the full product plan (virtual body, goal bodies, meal plans, exercise demos, progress) lives in [`PLAN.md`](./PLAN.md).
+> **Roadmap:** the full product plan (goal bodies, meal plans, exercise demos, progress) lives in [`PLAN.md`](./PLAN.md).
 
 ## 🛠️ Scripts
 
@@ -82,7 +78,7 @@ app/
 | `npm run build`  | Production build                   |
 | `npm start`      | Run production build locally       |
 | `npm run lint`   | Run ESLint                         |
-| `node scripts/build-body-assets.mjs` | Rebuild `public/body/body-male.json` + `body-female.json` from the CC0 MakeHuman assets in `data/makehuman/` |
+
 
 ## ⚠️ Disclaimer
 

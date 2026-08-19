@@ -1,7 +1,13 @@
 // Sleep science helpers, based on:
-// - 90-minute sleep cycles (Harvard, Sleep Foundation, Sleep Charity)
+// - 90-minute sleep cycles (Harvard, Sleep Foundation, Sleep Charity;
+//   Bes et al. 2023 confirmed ultradian NREM-REM cycling ~90 min in adults)
 // - Adults 18-60 need 7-9h; most need 5-6 full cycles (7.5-9h)
 // - ~15 min average to fall asleep (Healthline method)
+// - Ambient heat (>30°C) degrades sleep quality: reduces deep sleep and REM,
+//   increases wake after sleep onset (Chevance et al. 2024).
+//   Recommendation: keep bedroom at 18-20°C (65-68°F).
+// - Consistent sleep schedule is the single strongest predictor of sleep quality.
+//   Morning sunlight within 1h of waking anchors circadian rhythm.
 
 export const CYCLE_MINUTES = 90;
 export const FALL_ASLEEP_MINUTES = 15;

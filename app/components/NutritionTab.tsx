@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ACTIVITY_LEVELS, DEFAULT_PROFILE, EVERYDAY_STARS, GOALS, HARVARD_PLATE, macrosFor } from "@/app/lib/macros";
-import type { ActivityLevel, Goal, Profile, Sex } from "@/app/lib/macros";
+import { DEFAULT_PROFILE, EVERYDAY_STARS, GOALS, HARVARD_PLATE, macrosFor } from "@/app/lib/macros";
+import type { Goal, Profile } from "@/app/lib/macros";
 import { useLocalStorage } from "@/app/lib/use-local-state";
+import { regionForCountry, guidanceForRegion } from "@/app/lib/regions";
 import { FOODS, foodById, foodExcluded } from "@/app/lib/foods";
 import { planDay, shoppingList, totalsOf } from "@/app/lib/meal-plan";
 import type { MealPlan } from "@/app/lib/meal-plan";
@@ -40,18 +41,6 @@ function Card({ title, icon, children }: { title: string; icon: React.ReactNode;
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">{label}</span>
-      {children}
-    </label>
-  );
-}
-
-const inputCls =
-  "rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-200";
-
 const MEAL_EMOJI: Record<string, string> = { Breakfast: "🌅", Lunch: "☀️", Dinner: "🌙", "Snack 1": "🍎", "Snack 2": "🥜" };
 
 function macroChip(label: string, actual: number, target: number) {
@@ -76,9 +65,12 @@ export default function NutritionTab() {
   const [seed, setSeed] = useState(1);
   const [swapLog, setSwapLog] = useState<ItemSwap[]>([]);
 
+  const region = regionForCountry(profile.country);
+  const guidance = guidanceForRegion(region);
+
   const basePlan = useMemo(
-    () => planDay(macrosFor(profile), profile.diet, profile.allergies, profile.mealsPerDay, seed),
-    [profile, seed]
+    () => planDay(macrosFor(profile), profile.diet, profile.allergies, profile.mealsPerDay, seed, region),
+    [profile, seed, region]
   );
 
   const [prevBasePlan, setPrevBasePlan] = useState(basePlan);
@@ -95,131 +87,53 @@ export default function NutritionTab() {
     return current;
   }, [basePlan, swapLog]);
 
-  const update = <K extends keyof Profile>(key: K, value: Profile[K]) => {
-    setProfile((prev) => ({ ...prev, [key]: value }));
-  };
-
   const result = macrosFor(profile);
   const list = shoppingList(plan);
 
   return (
     <div className="space-y-6">
-      {/* Profile + macros */}
-      <Card
-        title="Your daily numbers"
-        icon={
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 3v18M3 12h18" strokeLinecap="round" />
-          </svg>
-        }
-      >
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Sex">
-            <select value={profile.sex} onChange={(e) => update("sex", e.target.value as Sex)} className={inputCls}>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </Field>
-          <Field label="Age">
-            <input
-              type="number"
-              min={14}
-              max={100}
-              value={profile.age}
-              onChange={(e) => update("age", Number(e.target.value))}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Weight (kg)">
-            <input
-              type="number"
-              min={30}
-              max={300}
-              value={profile.weightKg}
-              onChange={(e) => update("weightKg", Number(e.target.value))}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Height (cm)">
-            <input
-              type="number"
-              min={120}
-              max={250}
-              value={profile.heightCm}
-              onChange={(e) => update("heightCm", Number(e.target.value))}
-              className={inputCls}
-            />
-          </Field>
-          <Field label="Activity level">
-            <select
-              value={profile.activity}
-              onChange={(e) => update("activity", e.target.value as ActivityLevel)}
-              className={inputCls}
-            >
-              {ACTIVITY_LEVELS.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Goal">
-            <select
-              value={profile.goal}
-              onChange={(e) => {
-                const goal = e.target.value as Goal;
-                update("goal", goal);
-                setActiveGoal(goal);
-              }}
-              className={inputCls}
-            >
-              {GOALS.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          {ACTIVITY_LEVELS.find((a) => a.id === profile.activity)?.example} · Calories via Mifflin-St Jeor + activity
-          factor. Diet, meals/day &amp; allergies are set in the <strong>Body</strong> tab.
-        </p>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Calories / day", value: `${result.calories} kcal`, accent: true },
-            { label: "Protein", value: `${result.proteinG} g`, sub: `range ${result.proteinRange} g` },
-            { label: "Carbs", value: `${result.carbsG} g` },
-            { label: "Fat", value: `${result.fatG} g` },
-          ].map((m) => (
-            <div
-              key={m.label}
-              className={`rounded-xl border p-4 text-center ${
-                m.accent
-                  ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40"
-                  : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40"
-              }`}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{m.label}</p>
-              <p
-                className={`mt-1 text-2xl font-extrabold ${
-                  m.accent ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-900 dark:text-white"
-                }`}
-              >
-                {m.value}
-              </p>
-              {m.sub && <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{m.sub}</p>}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">
-            💧 Water: <strong>{result.waterL} L/day</strong> (NASEM adequate intake) · {result.note}
+      {/* Regional dietary guidance */}
+      {profile.country && (
+        <Card
+          title={`Dietary guidance — ${guidance.label}`}
+          icon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20z" />
+              <path d="M2 12h20" strokeLinecap="round" />
+            </svg>
+          }
+        >
+          <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+            Based on <strong>{guidance.pattern}</strong> — your meal plan prioritizes foods commonly available in {guidance.label}.
           </p>
-        </div>
-      </Card>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {guidance.principles.map((p, i) => (
+              <div key={i} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
+                <p className="text-xs leading-5 text-zinc-600 dark:text-zinc-400">{p}</p>
+              </div>
+            ))}
+          </div>
+          {guidance.supplements.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Regional supplement considerations
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {guidance.supplements.map((s) => (
+                  <div key={s.name} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{s.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500 dark:text-zinc-400">{s.reason}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <p className="mt-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+            💧 {guidance.waterNote}
+          </p>
+        </Card>
+      )}
 
       {/* Personalized meal plan */}
       <Card
@@ -232,7 +146,7 @@ export default function NutritionTab() {
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
-            Built from <strong>natural whole foods</strong> only, sized to hit{" "}
+            Built from <strong>natural whole foods</strong>{profile.country ? ` available in ${guidance.label}` : ""}, sized to hit{" "}
             <strong>{result.calories} kcal</strong> and your macros — {profile.diet} ·{" "}
             {profile.mealsPerDay} meals/day. Swap any item below; the plan rebalances.
           </p>
@@ -433,6 +347,94 @@ export default function NutritionTab() {
         <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
           Eating a variety of these most days covers most of your micronutrient bases — no supplements required for most
           people.
+        </p>
+      </Card>
+
+      {/* Evidence-based supplements */}
+      <Card
+        title="Evidence-based supplements"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 3h6v3l-3 3-3-3V3zM9 9l-2 9a4 4 0 0 0 10 0l-2-9" strokeLinejoin="round" />
+          </svg>
+        }
+      >
+        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Most people get everything they need from food. These supplements have strong evidence for specific
+          benefits — they're optional, not magic.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Creatine monohydrate</h4>
+            <p className="mt-1.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+              <strong>Dose:</strong> 3–5 g/day (no loading needed). <strong>Evidence:</strong> +4.43 kg upper-body,
+              +11.35 kg lower-body strength when combined with RT (Wang et al. 2024, 23 studies). Vegans and
+              vegetarians benefit most due to lower baseline stores (Gutiérrez-Hellín et al. 2025). Women may
+              benefit during menstrual cycle phases with lower creatine. Safe for healthy adults.
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Omega-3 fatty acids</h4>
+            <p className="mt-1.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+              <strong>Dose:</strong> 1–3 g EPA+DHA/day. <strong>Evidence:</strong> Reduces post-exercise
+              inflammation and muscle damage markers (Fernández-Lázaro et al. 2024, systematic review). May
+              support recovery. Found in fatty fish (salmon, sardines, mackerel).
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Vitamin D</h4>
+            <p className="mt-1.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+              <strong>Dose:</strong> 1000–2000 IU/day (if deficient). <strong>Evidence:</strong> Deficiency is
+              common in athletes (Ramos-Solarte et al. 2024). Supports bone health and physical function.
+              Daily dosing preferred over high-dose bolus (Bowles et al. 2024). Get levels tested — supplement
+              only if needed.
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+            <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Fiber (soluble)</h4>
+            <p className="mt-1.5 text-xs leading-5 text-zinc-600 dark:text-zinc-400">
+              <strong>Target:</strong> 25–38 g/day from food. <strong>Evidence:</strong> High soluble fiber
+              intake supports the gut-muscle axis in aging adults (Arief et al. 2024) and improves gut
+              microbiota composition (Zhao et al. 2024, RCT). Focus on whole foods: oats, beans, fruits, vegetables.
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+          Supplements are the cherry on top — whole foods come first. Consult a healthcare professional before
+          starting any supplement regimen.
+        </p>
+      </Card>
+
+      {/* Health benefits by sport */}
+      <Card
+        title="Health benefits by sport"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5m0 0 3.5 3.5M12 12 8.5 15.5" strokeLinecap="round" />
+          </svg>
+        }
+      >
+        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Oja et al. (2024) meta-analyzed 76 studies (2.6M participants). Choose what you enjoy —
+          consistency matters more than the specific activity.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          {[
+            { sport: "Cycling", benefits: "−16% coronary heart disease, −21% all-cause mortality, −20% CVD mortality" },
+            { sport: "Running", benefits: "−23% all-cause mortality, −20% cancer mortality, −27% CVD mortality" },
+            { sport: "Swimming", benefits: "−24% all-cause mortality, improves body composition and blood lipids" },
+            { sport: "Football / soccer", benefits: "Improves body composition, blood lipids, glucose, BP, bone strength" },
+          ].map((s) => (
+            <div key={s.sport} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950/40">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{s.sport}</p>
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{s.benefits}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+          Running and swimming provide the strongest mortality-reduction evidence. Resistance training (see Fitness tab)
+          complements any cardio — both are important for longevity.
         </p>
       </Card>
     </div>
