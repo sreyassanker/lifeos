@@ -172,6 +172,71 @@ export const HARVARD_PLATE: FoodGroup[] = [
   },
 ];
 
+// ── Adaptive calorie adjustment (Paper #21: Hall's Dynamic Model concept) ──
+// Monitors weight trend over 2+ weeks and adjusts TDEE if progress stalls.
+// Based on: if weight loss < 0.2 kg/week during a cut → reduce by 100 kcal;
+//           if weight loss > 1 kg/week → increase by 100 kcal (too aggressive).
+export interface AdaptiveResult {
+  adjustedCalories: number;
+  trendKgPerWeek: number;
+  adjustment: number;
+  reason: string;
+}
+
+export function adaptiveCalories(
+  currentCalories: number,
+  weightHistory: { date: string; value: number }[],
+  goal: Goal
+): AdaptiveResult {
+  if (weightHistory.length < 3) {
+    return { adjustedCalories: currentCalories, trendKgPerWeek: 0, adjustment: 0, reason: "Need at least 3 weigh-ins to estimate trend." };
+  }
+
+  // Use first and last points for trend (simple linear slope)
+  const first = weightHistory[0];
+  const last = weightHistory[weightHistory.length - 1];
+  const daysDiff = (new Date(last.date).getTime() - new Date(first.date).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysDiff < 7) {
+    return { adjustedCalories: currentCalories, trendKgPerWeek: 0, adjustment: 0, reason: "Need at least 7 days of data for trend." };
+  }
+  const weeksDiff = daysDiff / 7;
+  const trendKgPerWeek = (last.value - first.value) / weeksDiff;
+
+  let adjustment = 0;
+  let reason = "";
+
+  if (goal === "cut") {
+    if (trendKgPerWeek > -0.1) {
+      // Weight not dropping — reduce calories
+      adjustment = -100;
+      reason = `Weight stalled (${trendKgPerWeek.toFixed(2)} kg/week). Reducing by 100 kcal.`;
+    } else if (trendKgPerWeek < -1.2) {
+      // Dropping too fast — increase calories to preserve muscle
+      adjustment = 100;
+      reason = `Losing too fast (${trendKgPerWeek.toFixed(2)} kg/week). Increasing by 100 kcal to preserve muscle.`;
+    } else {
+      reason = `Good progress (${trendKgPerWeek.toFixed(2)} kg/week). No adjustment needed.`;
+    }
+  } else if (goal === "lean_bulk" || goal === "bulk") {
+    if (trendKgPerWeek < 0.05) {
+      // Not gaining — increase calories
+      adjustment = 100;
+      reason = `Weight not increasing (${trendKgPerWeek.toFixed(2)} kg/week). Increasing by 100 kcal.`;
+    } else if (trendKgPerWeek > 0.5) {
+      // Gaining too fast — reduce surplus
+      adjustment = -100;
+      reason = `Gaining too fast (${trendKgPerWeek.toFixed(2)} kg/week). Reducing by 100 kcal.`;
+    } else {
+      reason = `Good progress (${trendKgPerWeek.toFixed(2)} kg/week). No adjustment needed.`;
+    }
+  } else {
+    reason = "Maintain goal — no automatic adjustment.";
+  }
+
+  const adjustedCalories = Math.max(1200, currentCalories + adjustment);
+  return { adjustedCalories, trendKgPerWeek: Math.round(trendKgPerWeek * 100) / 100, adjustment, reason };
+}
+
 export const EVERYDAY_STARS: { name: string; why: string }[] = [
   { name: "Leafy greens (spinach, kale)", why: "Vitamins, fiber, and folate — the base of any healthy plate." },
   { name: "Berries", why: "Among the highest antioxidant fruits, low in sugar." },

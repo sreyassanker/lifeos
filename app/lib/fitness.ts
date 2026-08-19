@@ -32,12 +32,64 @@ export interface Exercise {
 export interface PlanItem {
   text: string;
   demo?: ExerciseDemo;
+  /** MET value (Metabolic Equivalent of Task) — Ainsworth 2024 Compendium */
+  met?: number;
+  /** Estimated duration in minutes for this item */
+  durationMin?: number;
 }
 
 export interface DayPlan {
   day: string;
   title: string;
   items: PlanItem[];
+  /** Estimated total duration for this day's workout */
+  totalMin?: number;
+}
+
+// ── MET-based calorie estimation ──────────────────────────────────────────
+// Calories = MET × weight(kg) × duration(hours)
+// Source: Ainsworth et al. (2024) Compendium of Physical Activities.
+export function estimateCaloriesBurn(items: PlanItem[], weightKg: number): number {
+  let totalCal = 0;
+  for (const item of items) {
+    if (item.met && item.durationMin) {
+      totalCal += item.met * weightKg * (item.durationMin / 60);
+    }
+  }
+  return Math.round(totalCal);
+}
+
+export function dayCaloriesBurn(day: DayPlan, weightKg: number): number {
+  return estimateCaloriesBurn(day.items, weightKg);
+}
+
+// ── WHO Physical Activity Targets (2020) ──────────────────────────────────
+// Adults: 150–300 min/week moderate-intensity OR 75–150 min vigorous.
+// MET ≥6 counts as vigorous; MET 3–5.9 counts as moderate.
+// https://iris.who.int/bitstream/handle/10665/336656/9789240015128-eng.pdf
+export const WHO_WEEKLY_MODERATE_MIN = 150;
+export const WHO_WEEKLY_VIGOROUS_MIN = 75;
+
+export function classifyIntensity(met: number): "light" | "moderate" | "vigorous" {
+  if (met >= 6) return "vigorous";
+  if (met >= 3) return "moderate";
+  return "light";
+}
+
+/** Compute total moderate-equivalent minutes for a set of day plans.
+ *  Vigorous minutes count double (per WHO guidelines).
+ */
+export function weeklyModerateEquivMin(days: DayPlan[]): number {
+  let total = 0;
+  for (const day of days) {
+    for (const item of day.items) {
+      if (!item.met || !item.durationMin) continue;
+      const intensity = classifyIntensity(item.met);
+      if (intensity === "vigorous") total += item.durationMin * 2;
+      else if (intensity === "moderate") total += item.durationMin;
+    }
+  }
+  return Math.round(total);
 }
 
 export const KEY_FACTS: { fact: string; detail: string }[] = [
@@ -108,54 +160,37 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Monday",
     title: "Upper push + core",
+    totalMin: 35,
     items: [
       {
         text: "Push-ups — 3 × 12–20 (chest, shoulders, triceps)",
-        demo: {
-          videoId: "c-lBErfxszs",
-          creator: "Davis Diley / ATHLEAN-X",
-          note: "Hands under shoulders, full range of motion. Keep core tight — no sagging hips.",
-        },
+        met: 8.0, durationMin: 5,
+        demo: { videoId: "c-lBErfxszs", creator: "Davis Diley / ATHLEAN-X", note: "Hands under shoulders, full range of motion. Keep core tight — no sagging hips." },
       },
       {
         text: "Diamond push-ups — 3 × 8–12 (triceps, inner chest)",
-        demo: {
-          videoId: "YEdjByGD_A4",
-          creator: "Frayzo Fitness",
-          note: "Hands together under chest forming a diamond. Elbows stay close to your body.",
-        },
+        met: 8.0, durationMin: 4,
+        demo: { videoId: "YEdjByGD_A4", creator: "Frayzo Fitness", note: "Hands together under chest forming a diamond. Elbows stay close to your body." },
       },
       {
         text: "Pike push-ups — 3 × 8–12 (shoulders)",
-        demo: {
-          videoId: "89-8waE2XKI",
-          creator: "STRIQfit",
-          note: "Feet elevated, hips high — press your head toward the floor. Targets deltoids like an overhead press.",
-        },
+        met: 8.0, durationMin: 4,
+        demo: { videoId: "89-8waE2XKI", creator: "STRIQfit", note: "Feet elevated, hips high — press your head toward the floor. Targets deltoids like an overhead press." },
       },
       {
         text: "Tricep dips (chair) — 3 × 10–15 (triceps)",
-        demo: {
-          videoId: "4ua3MzaU0QU",
-          creator: "Andrew Kwong (DeltaBolic)",
-          note: "Hands on chair edge, lower until elbows are ~90°. Keep back close to the chair.",
-        },
+        met: 5.0, durationMin: 4,
+        demo: { videoId: "4ua3MzaU0QU", creator: "Andrew Kwong (DeltaBolic)", note: "Hands on chair edge, lower until elbows are ~90°. Keep back close to the chair." },
       },
       {
         text: "Plank — 3 × 30–60s (core stability)",
-        demo: {
-          videoId: "xe2MXatLTUw",
-          creator: "Andrew Kwong (DeltaBolic)",
-          note: "Forearms on ground, body in a straight line. Squeeze glutes and brace abs — don't hold your breath.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "xe2MXatLTUw", creator: "Andrew Kwong (DeltaBolic)", note: "Forearms on ground, body in a straight line. Squeeze glutes and brace abs — don't hold your breath." },
       },
       {
         text: "Dead bug — 3 × 10/side (deep core, coordination)",
-        demo: {
-          videoId: "DqLL45uk2Tk",
-          creator: "Derek Ward",
-          note: "Lie on your back, arms up, knees bent 90°. Extend opposite arm + leg while keeping lower back flat on the floor.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "DqLL45uk2Tk", creator: "Derek Ward", note: "Lie on your back, arms up, knees bent 90°. Extend opposite arm + leg while keeping lower back flat on the floor." },
       },
     ],
   },
@@ -164,22 +199,17 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Tuesday",
     title: "Cardio + mobility",
+    totalMin: 40,
     items: [
       {
         text: "Jump rope (simulated) — 30–40 min zone 2 (heart rate 60–70% max)",
-        demo: {
-          videoId: "5q4qOTTvnYM",
-          creator: "Coach Kozak / HASfit",
-          note: "No rope needed — just bounce on the balls of your feet with the same arm motion. Stay relaxed.",
-        },
+        met: 12.3, durationMin: 30,
+        demo: { videoId: "5q4qOTTvnYM", creator: "Coach Kozak / HASfit", note: "No rope needed — just bounce on the balls of your feet with the same arm motion. Stay relaxed." },
       },
       {
         text: "Full body stretching flow — 10 min cooldown",
-        demo: {
-          videoId: "KrUnq66qn_k",
-          creator: "Yoga With Adriene",
-          note: "Focus on hips, hamstrings, shoulders. Hold each stretch 20–30s, breathe deeply.",
-        },
+        met: 2.5, durationMin: 10,
+        demo: { videoId: "KrUnq66qn_k", creator: "Yoga With Adriene", note: "Focus on hips, hamstrings, shoulders. Hold each stretch 20–30s, breathe deeply." },
       },
     ],
   },
@@ -188,54 +218,37 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Wednesday",
     title: "Lower body + core",
+    totalMin: 35,
     items: [
       {
         text: "Bodyweight squats — 3 × 15–20 (quads, glutes)",
-        demo: {
-          videoId: "PPmvh7gBTi0",
-          creator: "Jeff Nippard",
-          note: "Feet shoulder-width, push knees out over toes, descend until thighs are parallel or below.",
-        },
+        met: 5.0, durationMin: 5,
+        demo: { videoId: "PPmvh7gBTi0", creator: "Jeff Nippard", note: "Feet shoulder-width, push knees out over toes, descend until thighs are parallel or below." },
       },
       {
         text: "Reverse lunges — 3 × 10/side (quads, glutes, balance)",
-        demo: {
-          videoId: "38xlLGfguz4",
-          creator: "Oliver Sjostrom",
-          note: "Step back, lower until both knees are ~90°. Front knee tracks over the second toe.",
-        },
+        met: 5.0, durationMin: 5,
+        demo: { videoId: "38xlLGfguz4", creator: "Oliver Sjostrom", note: "Step back, lower until both knees are ~90°. Front knee tracks over the second toe." },
       },
       {
         text: "Single-leg glute bridge — 3 × 12/side (glutes, hamstrings)",
-        demo: {
-          videoId: "4ilXaDauMnE",
-          creator: "Bret Contreras",
-          note: "Lie on your back, one foot flat, extend the other leg. Drive through the heel to lift hips.",
-        },
+        met: 3.8, durationMin: 4,
+        demo: { videoId: "4ilXaDauMnE", creator: "Bret Contreras", note: "Lie on your back, one foot flat, extend the other leg. Drive through the heel to lift hips." },
       },
       {
         text: "Calf raises (standing) — 3 × 15–20 (calves)",
-        demo: {
-          videoId: "baEXLy09Ncc",
-          creator: "Jeff Nippard",
-          note: "Rise onto balls of feet, pause 1s at the top, lower slowly (3s eccentric). Full range of motion.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "baEXLy09Ncc", creator: "Jeff Nippard", note: "Rise onto balls of feet, pause 1s at the top, lower slowly (3s eccentric). Full range of motion." },
       },
       {
         text: "Side plank — 3 × 30–40s/side (obliques, core stability)",
-        demo: {
-          videoId: "TSXVcb2Wc9k",
-          creator: "ATHLEAN-X",
-          note: "Forearm on ground, body in a straight line from head to feet. Stack or stagger your feet.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "TSXVcb2Wc9k", creator: "ATHLEAN-X", note: "Forearm on ground, body in a straight line from head to feet. Stack or stagger your feet." },
       },
       {
         text: "Bicycle crunch — 3 × 15/side (obliques, rectus abdominis)",
-        demo: {
-          videoId: "cFDS2S6Vqis",
-          creator: "Go with JO FITNESS",
-          note: "Don't pull on your neck — hands lightly behind ears. Rotate torso, bring elbow toward opposite knee.",
-        },
+        met: 4.0, durationMin: 3,
+        demo: { videoId: "cFDS2S6Vqis", creator: "Go with JO FITNESS", note: "Don't pull on your neck — hands lightly behind ears. Rotate torso, bring elbow toward opposite knee." },
       },
     ],
   },
@@ -244,14 +257,12 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Thursday",
     title: "Active recovery",
+    totalMin: 25,
     items: [
       {
         text: "Gentle yoga / mobility flow — 20–30 min",
-        demo: {
-          videoId: "2IcWJobNDck",
-          creator: "Yoga With Adriene",
-          note: "Move slowly, breathe deeply. Focus on areas that feel tight from the week.",
-        },
+        met: 2.5, durationMin: 25,
+        demo: { videoId: "2IcWJobNDck", creator: "Yoga With Adriene", note: "Move slowly, breathe deeply. Focus on areas that feel tight from the week." },
       },
       {
         text: "Optional: aim for 5,000–8,000 steps total today",
@@ -263,38 +274,27 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Friday",
     title: "Upper back / hinge + core",
+    totalMin: 30,
     items: [
       {
         text: "Superman hold — 3 × 12–15 (erector spinae, glutes)",
-        demo: {
-          videoId: "ydT74SAts7M",
-          creator: "ATHLEAN-X",
-          note: "Lie face down, arms extended overhead. Lift arms + legs simultaneously, hold 2–3s, lower slowly.",
-        },
+        met: 3.8, durationMin: 4,
+        demo: { videoId: "ydT74SAts7M", creator: "ATHLEAN-X", note: "Lie face down, arms extended overhead. Lift arms + legs simultaneously, hold 2–3s, lower slowly." },
       },
       {
         text: "Bird-dog — 3 × 10/side (core stability, coordination)",
-        demo: {
-          videoId: "pS-SfFoc8uk",
-          creator: "Squat University",
-          note: "Hands under shoulders, knees under hips. Extend opposite arm + leg, hold 2s. Keep hips level — no rotation.",
-        },
+        met: 3.8, durationMin: 4,
+        demo: { videoId: "pS-SfFoc8uk", creator: "Squat University", note: "Hands under shoulders, knees under hips. Extend opposite arm + leg, hold 2s. Keep hips level — no rotation." },
       },
       {
         text: "Reverse crunch — 3 × 15–20 (lower abs)",
-        demo: {
-          videoId: "0BNhpx_nxDM",
-          creator: "Jeff Nippard",
-          note: "Lie on your back, knees bent. Curl pelvis toward chest — don't swing your legs. Squeeze at the top.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "0BNhpx_nxDM", creator: "Jeff Nippard", note: "Lie on your back, knees bent. Curl pelvis toward chest — don't swing your legs. Squeeze at the top." },
       },
       {
         text: "Mountain climbers — 3 × 30s (cardio + core)",
-        demo: {
-          videoId: "0LvR42Z599c",
-          creator: "Romane Lanceford",
-          note: "Push-up position, drive knees toward chest alternately at a controlled pace. Keep hips level.",
-        },
+        met: 8.0, durationMin: 3,
+        demo: { videoId: "0LvR42Z599c", creator: "Romane Lanceford", note: "Push-up position, drive knees toward chest alternately at a controlled pace. Keep hips level." },
       },
     ],
   },
@@ -303,38 +303,27 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Saturday",
     title: "Full body HIIT + core",
+    totalMin: 30,
     items: [
       {
         text: "Burpees — 3 × 10 (full body, cardio)",
-        demo: {
-          videoId: "1KOttLvp4lU",
-          creator: "Calisthenics Workout Complex",
-          note: "Drop to push-up, jump feet to hands, explode up. Scale by stepping back instead of jumping.",
-        },
+        met: 10.0, durationMin: 5,
+        demo: { videoId: "1KOttLvp4lU", creator: "Calisthenics Workout Complex", note: "Drop to push-up, jump feet to hands, explode up. Scale by stepping back instead of jumping." },
       },
       {
         text: "Jumping jacks — 3 × 30s (cardio, coordination)",
-        demo: {
-          videoId: "6q68oE6984E",
-          creator: "HASfit (Coach Kozak)",
-          note: "Land softly on balls of feet. Keep a steady pace — this is zone 2 cardio, not a sprint.",
-        },
+        met: 8.0, durationMin: 3,
+        demo: { videoId: "6q68oE6984E", creator: "HASfit (Coach Kozak)", note: "Land softly on balls of feet. Keep a steady pace — this is zone 2 cardio, not a sprint." },
       },
       {
         text: "High knees — 3 × 30s (cardio, hip flexors)",
-        demo: {
-          videoId: "MtR8N6lvCSk",
-          creator: "HASfit (Coach Kozak)",
-          note: "Drive knees to hip height, pump arms. Stay on the balls of your feet. Controlled pace.",
-        },
+        met: 8.0, durationMin: 3,
+        demo: { videoId: "MtR8N6lvCSk", creator: "HASfit (Coach Kozak)", note: "Drive knees to hip height, pump arms. Stay on the balls of your feet. Controlled pace." },
       },
       {
         text: "Wall sit — 3 × 30–45s (quads, mental toughness)",
-        demo: {
-          videoId: "mDdLC-yKudY",
-          creator: "YOGABODY",
-          note: "Back flat against wall, thighs parallel to floor. Press your lower back into the wall.",
-        },
+        met: 3.8, durationMin: 3,
+        demo: { videoId: "mDdLC-yKudY", creator: "YOGABODY", note: "Back flat against wall, thighs parallel to floor. Press your lower back into the wall." },
       },
     ],
   },
@@ -343,6 +332,7 @@ export const WEEK_PLAN: DayPlan[] = [
   {
     day: "Sunday",
     title: "Full rest",
+    totalMin: 0,
     items: [
       { text: "Rest — recovery is when muscles grow" },
       { text: "Consistent sleep and protein today matter as much as training" },

@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { BODY_FAT_LEVELS, KEY_FACTS, WEEK_PLAN } from "@/app/lib/fitness";
+import { BODY_FAT_LEVELS, KEY_FACTS, WEEK_PLAN, dayCaloriesBurn, weeklyModerateEquivMin, WHO_WEEKLY_MODERATE_MIN } from "@/app/lib/fitness";
 import type { ExerciseDemo } from "@/app/lib/fitness";
+import { DEFAULT_PROFILE } from "@/app/lib/macros";
+import type { Profile } from "@/app/lib/macros";
+import { useLocalStorage } from "@/app/lib/use-local-state";
 
 function Card({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -110,11 +113,73 @@ function ExerciseItem({ text, demo }: { text: string; demo?: ExerciseDemo }) {
 }
 
 export default function FitnessTab() {
+  const [profile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const today = new Date().getDay();
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const weeklyMins = weeklyModerateEquivMin(WEEK_PLAN);
+  const whoTarget = WHO_WEEKLY_MODERATE_MIN;
+  const weeklyCalBurn = WEEK_PLAN.reduce((sum, d) => sum + dayCaloriesBurn(d, profile.weightKg), 0);
 
   return (
     <div className="space-y-6">
+      {/* WHO activity targets */}
+      <Card
+        title="WHO weekly activity targets"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 3" strokeLinecap="round" />
+          </svg>
+        }
+      >
+        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          WHO 2020 guidelines: <strong>150–300 min/week</strong> moderate-intensity activity (or 75–150 min vigorous). Vigorous minutes count double.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className={`rounded-xl border p-4 text-center ${
+            weeklyMins >= whoTarget
+              ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40"
+              : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950/40"
+          }`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">This week&apos;s plan</p>
+            <p className={`mt-1 text-2xl font-extrabold ${
+              weeklyMins >= whoTarget ? "text-emerald-700 dark:text-emerald-300" : "text-zinc-900 dark:text-white"
+            }`}>
+              {weeklyMins} min
+            </p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              of {whoTarget} min WHO target ({Math.round((weeklyMins / whoTarget) * 100)}%)
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Est. weekly burn</p>
+            <p className="mt-1 text-2xl font-extrabold text-zinc-900 dark:text-white">{weeklyCalBurn} kcal</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">at {profile.weightKg} kg body weight</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Training days</p>
+            <p className="mt-1 text-2xl font-extrabold text-zinc-900 dark:text-white">{WEEK_PLAN.filter((d) => (d.totalMin ?? 0) > 0).length}/7</p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">active + 1 rest day</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            <span>Progress toward WHO target</span>
+            <span className={`font-bold ${weeklyMins >= whoTarget ? "text-emerald-600" : "text-amber-600"}`}>
+              {Math.min(100, Math.round((weeklyMins / whoTarget) * 100))}%
+            </span>
+          </div>
+          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+            <div
+              className={`h-full rounded-full transition-all ${
+                weeklyMins >= whoTarget ? "bg-emerald-500" : "bg-amber-500"
+              }`}
+              style={{ width: `${Math.min(100, (weeklyMins / whoTarget) * 100)}%` }}
+            />
+          </div>
+        </div>
+      </Card>
+
       {/* The truth first */}
       <Card
         title="The truth about six-packs"
@@ -222,6 +287,11 @@ export default function FitnessTab() {
                   </h4>
                 </div>
                 <p className="mt-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">{d.title}</p>
+                {d.totalMin ? (
+                  <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                    ~{d.totalMin} min · ~{dayCaloriesBurn(d, profile.weightKg)} kcal burned
+                  </p>
+                ) : null}
                 <div className="mt-2 space-y-2">
                   {d.items.map((item) => (
                     <ExerciseItem key={item.text} text={item.text} demo={item.demo} />

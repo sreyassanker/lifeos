@@ -102,6 +102,150 @@ export interface HygieneItem {
   detail: string;
 }
 
+// ── Sleep quality scoring (Paper #34: AASM Manual) ───────────────────────
+// Sleep efficiency = (time asleep / time in bed) × 100
+// Quality rating based on efficiency + duration:
+//   Excellent: ≥90% efficiency + 7–9h sleep
+//   Good: ≥85% efficiency + 6.5–9h
+//   Fair: ≥75% efficiency + 6–9h
+//   Poor: <75% efficiency OR <6h sleep
+
+export interface SleepQualityInput {
+  bedTime: string;    // "HH:MM" 24h
+  wakeTime: string;   // "HH:MM" 24h
+  /** Minutes to fall asleep (default 15) */
+  fallAsleepMin?: number;
+  /** Number of awakenings during the night */
+  awakenings?: number;
+}
+
+export interface SleepQualityResult {
+  /** Total time in bed (minutes) */
+  timeInBedMin: number;
+  /** Estimated time asleep (minutes) */
+  timeAsleepMin: number;
+  /** Sleep efficiency percentage */
+  efficiency: number;
+  /** Number of complete sleep cycles (90 min each) */
+  cycles: number;
+  /** Quality rating */
+  rating: "excellent" | "good" | "fair" | "poor";
+  /** Human-readable summary */
+  summary: string;
+  /** Score 0–100 */
+  score: number;
+}
+
+function parseTime(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+export function computeSleepQuality(input: SleepQualityInput): SleepQualityResult {
+  let bedMin = parseTime(input.bedTime);
+  let wakeMin = parseTime(input.wakeTime);
+  if (wakeMin <= bedMin) wakeMin += 24 * 60; // crosses midnight
+
+  const timeInBedMin = wakeMin - bedMin;
+  const fallAsleep = input.fallAsleepMin ?? 15;
+  const awakenings = input.awakenings ?? 0;
+  const awakeningsMin = awakenings * 5; // ~5 min per awakening
+  const timeAsleepMin = Math.max(0, timeInBedMin - fallAsleep - awakeningsMin);
+  const efficiency = timeInBedMin > 0 ? Math.round((timeAsleepMin / timeInBedMin) * 100) : 0;
+  const cycles = Math.floor(timeAsleepMin / 90);
+  const hoursAsleep = timeAsleepMin / 60;
+
+  let rating: SleepQualityResult["rating"];
+  let score: number;
+
+  if (efficiency >= 90 && hoursAsleep >= 7 && hoursAsleep <= 9) {
+    rating = "excellent";
+    score = 95;
+  } else if (efficiency >= 85 && hoursAsleep >= 6.5 && hoursAsleep <= 9.5) {
+    rating = "good";
+    score = 80;
+  } else if (efficiency >= 75 && hoursAsleep >= 6) {
+    rating = "fair";
+    score = 60;
+  } else {
+    rating = "poor";
+    score = Math.max(20, Math.round(efficiency * 0.5 + Math.min(hoursAsleep, 8) * 5));
+  }
+
+  // Adjust score for awakenings
+  score = Math.max(10, score - awakenings * 3);
+
+  const summary = rating === "excellent"
+    ? `${hoursAsleep.toFixed(1)}h sleep, ${efficiency}% efficiency, ${cycles} cycles — excellent quality. You're well-rested.`
+    : rating === "good"
+    ? `${hoursAsleep.toFixed(1)}h sleep, ${efficiency}% efficiency, ${cycles} cycles — solid sleep. ${awakenings > 0 ? `Try to reduce ${awakenings} awakenings.` : ""}`
+    : rating === "fair"
+    ? `${hoursAsleep.toFixed(1)}h sleep, ${efficiency}% efficiency — fair quality. ${hoursAsleep < 7 ? "Aim for 7–9h." : "Focus on reducing awakenings."}`
+    : `${hoursAsleep.toFixed(1)}h sleep, ${efficiency}% efficiency — poor quality. Review your sleep hygiene checklist.`;
+
+  return { timeInBedMin, timeAsleepMin, efficiency, cycles, rating, summary, score };
+}
+
+// ── Circadian alignment score (Paper #35: Smets et al. 2020) ─────────────
+// Circadian regularity = how consistent your wake time is day-to-day.
+// More regular = better sleep quality and hormonal alignment.
+// Metric: coefficient of variation (CV) of wake times over the past week.
+// Score 0-100: 100 = perfectly consistent, 0 = highly variable.
+
+export interface CircadianInput {
+  /** Array of recent wake times in minutes since midnight (e.g., 420 = 7:00) */
+  wakeTimesMin: number[];
+}
+
+export interface CircadianResult {
+  /** Regularity score 0-100 */
+  score: number;
+  /** Average wake time (HH:MM) */
+  avgWakeTime: string;
+  /** Standard deviation in minutes */
+  stdDevMin: number;
+  /** Rating */
+  rating: "excellent" | "good" | "fair" | "poor";
+  /** Human-readable summary */
+  summary: string;
+}
+
+export function computeCircadianRegularity(input: CircadianInput): CircadianResult | null {
+  const { wakeTimesMin } = input;
+  if (wakeTimesMin.length < 3) return null;
+
+  const avg = wakeTimesMin.reduce((a, b) => a + b, 0) / wakeTimesMin.length;
+  const variance = wakeTimesMin.reduce((sum, t) => sum + Math.pow(t - avg, 2), 0) / wakeTimesMin.length;
+  const stdDev = Math.sqrt(variance);
+
+  // Convert avg to HH:MM
+  const avgH = Math.floor(avg / 60) % 24;
+  const avgM = Math.round(avg % 60);
+  const avgWakeTime = `${String(avgH).padStart(2, "0")}:${String(avgM).padStart(2, "0")}`;
+
+  // Score: stdDev of 0 min = 100, stdDev of 60+ min = 0
+  const score = Math.max(0, Math.min(100, Math.round(100 - (stdDev / 60) * 100)));
+
+  let rating: CircadianResult["rating"];
+  let summary: string;
+
+  if (score >= 90) {
+    rating = "excellent";
+    summary = `Wake time is very consistent (±${Math.round(stdDev)} min). Your circadian rhythm is well-anchored.`;
+  } else if (score >= 70) {
+    rating = "good";
+    summary = `Wake time varies by ±${Math.round(stdDev)} min — pretty consistent. Small improvements help.`;
+  } else if (score >= 50) {
+    rating = "fair";
+    summary = `Wake time varies by ±${Math.round(stdDev)} min — try to wake within a 30-minute window.`;
+  } else {
+    rating = "poor";
+    summary = `Wake time varies by ±${Math.round(stdDev)} min — irregular schedule disrupts circadian rhythm.`;
+  }
+
+  return { score, avgWakeTime, stdDevMin: Math.round(stdDev), rating, summary };
+}
+
 export const SLEEP_HYGIENE: HygieneItem[] = [
   {
     label: "Consistent schedule",

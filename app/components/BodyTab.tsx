@@ -17,8 +17,10 @@ import {
   weeksToReach,
 } from "@/app/lib/body";
 import type { Measurements } from "@/app/lib/body";
-import { ACTIVITY_LEVELS, DEFAULT_PROFILE, DIETS, GOALS, macrosFor } from "@/app/lib/macros";
+import { ACTIVITY_LEVELS, DEFAULT_PROFILE, DIETS, GOALS, macrosFor, adaptiveCalories } from "@/app/lib/macros";
 import type { ActivityLevel, Diet, Goal, Profile } from "@/app/lib/macros";
+import { trend } from "@/app/lib/progress";
+import type { CheckIn } from "@/app/lib/progress";
 import { COUNTRIES, statesForCountry } from "@/app/lib/regions";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 
@@ -100,6 +102,9 @@ export default function BodyTab() {
   );
 
   const macros = macrosFor(profile);
+  const [progress] = useLocalStorage<CheckIn[]>("lifeos-progress", []);
+  const weightTrend = useMemo(() => trend(progress, "weightKg", 10), [progress]);
+  const adaptive = useMemo(() => adaptiveCalories(macros.calories, weightTrend, profile.goal), [macros.calories, weightTrend, profile.goal]);
 
   const bf = useMemo(
     () => (hasCore ? bodyFatNavy(measurements as Measurements, profile.sex, heightCm) : null),
@@ -522,6 +527,14 @@ export default function BodyTab() {
               To get there you&apos;ll eat ≈ <strong>{macros.calories} kcal/day</strong> (P {macros.proteinG}g · C{" "}
               {macros.carbsG}g · F {macros.fatG}g) — see your personalized meal plan in the <strong>Nutrition</strong> tab.
             </p>
+            {adaptive.adjustment !== 0 && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/30">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                  ⚡ Adaptive adjustment: {adaptive.adjustedCalories} kcal/day
+                </p>
+                <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">{adaptive.reason}</p>
+              </div>
+            )}
           </>
         )}
       </section>

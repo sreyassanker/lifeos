@@ -10,9 +10,12 @@ import { planDay } from "@/app/lib/meal-plan";
 import { foodById } from "@/app/lib/foods";
 import { bodyFatNavy } from "@/app/lib/body";
 import type { Measurements } from "@/app/lib/body";
-import { latest, todayKey, trend, upsertCheckIn } from "@/app/lib/progress";
+import { latest, todayKey, trend, upsertCheckIn, computeRecovery } from "@/app/lib/progress";
 import type { CheckIn } from "@/app/lib/progress";
 import { WEEK_PLAN } from "@/app/lib/fitness";
+import { computeSleepQuality } from "@/app/lib/sleep";
+import { generateCoachingTips, timeGreeting } from "@/app/lib/coaching";
+import { computeVitality, vitalityColor, vitalityBg } from "@/app/lib/vitality";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 
 const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -51,13 +54,74 @@ export default function DashboardTab() {
   const today = new Date().getDay();
   const todayPlan = WEEK_PLAN.find((d) => d.day === dayNames[today]);
 
+  // Recovery score computation
+  const [bed] = useLocalStorage<string>("lifeos-bed", "23:00");
+  const [fallAsleepMin] = useLocalStorage<number>("lifeos-fall-asleep", 15);
+  const [awakenings] = useLocalStorage<number>("lifeos-awakenings", 0);
+
+  const sleepQuality = useMemo(() => {
+    if (!bed || !wake) return null;
+    return computeSleepQuality({ bedTime: bed, wakeTime: wake, fallAsleepMin, awakenings });
+  }, [bed, wake, fallAsleepMin, awakenings]);
+
+  const isRestDay = today === 6 || today === 0; // Sat or Sun
+  const workoutsCompleted = useMemo(() => {
+    let count = 0;
+    for (let i = 0; i < 7; i++) {
+      const day = WEEK_PLAN[i];
+      if (day && (day.totalMin ?? 0) > 0 && i <= today) count++;
+    }
+    return count;
+  }, [today]);
+
+  const recovery = useMemo(() => computeRecovery({
+    sleepScore: sleepQuality?.score ?? 75,
+    workoutsCompleted,
+    workoutsPlanned: 6,
+    isRestDay,
+    consecutiveActiveDays: isRestDay ? 0 : Math.min(today, 6),
+  }), [sleepQuality, workoutsCompleted, isRestDay, today]);
+
   const bedtime = useMemo(() => (wake ? bedtimesForWake(wake)[1] : null), [wake]);
   const macros = useMemo(() => macrosFor(profile), [profile]);
   const doneCount = habits.filter((h) => done[h]).length;
+
+
   const plan = useMemo(
     () => planDay(macros, profile.diet, profile.allergies, profile.mealsPerDay, 0),
     [macros, profile.diet, profile.allergies, profile.mealsPerDay]
   );
+
+  // Gamification: streaks and badges (after plan is declared)
+  const [streak, setStreak] = useLocalStorage<number>("lifeos-streak", 0);
+  const [lastActiveDate, setLastActiveDate] = useLocalStorage<string>("lifeos-last-active", "");
+  const todayKey_ = todayKey();
+
+  useMemo(() => {
+    if (lastActiveDate === todayKey_) return;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+    if (lastActiveDate === yKey) {
+      setStreak((s) => s + 1);
+    } else if (lastActiveDate !== todayKey_) {
+      setStreak(1);
+    }
+    setLastActiveDate(todayKey_);
+  }, [todayKey_, lastActiveDate, setStreak, setLastActiveDate]);
+
+  const badges = useMemo(() => {
+    const b: { label: string; emoji: string; earned: boolean }[] = [];
+    b.push({ label: "Protein goal", emoji: "🥩", earned: plan.totals.proteinG >= macros.proteinG * 0.9 });
+    b.push({ label: "Hydration hero", emoji: "💧", earned: water >= WATER_GOAL });
+    b.push({ label: "Habit master", emoji: "✅", earned: doneCount >= habits.length });
+    b.push({ label: "Early riser", emoji: "🌅", earned: wake !== "" && wake <= "07:00" });
+    b.push({ label: "Workout warrior", emoji: "💪", earned: (todayPlan?.totalMin ?? 0) > 0 });
+    b.push({ label: "7-day streak", emoji: "🔥", earned: streak >= 7 });
+    return b;
+  }, [plan.totals.proteinG, macros.proteinG, water, doneCount, habits.length, wake, todayPlan, streak]);
+  const badgesEarned = badges.filter((b) => b.earned).length;
+
   const weightTrend = useMemo(() => trend(progress, "weightKg"), [progress]);
   const estBf = useMemo(() => {
     const m = profile.measurements;
@@ -129,6 +193,153 @@ export default function DashboardTab() {
           <Stat label="Water" value={`${water}/${WATER_GOAL} glasses`} sub="Tap to log a glass" />
           <Stat label="Habits" value={`${doneCount}/${habits.length}`} sub="Daily checklist" />
         </div>
+
+        {/* Recovery score */}
+        <div className={`rounded-xl border p-4 ${
+          recovery.rating === "ready"
+            ? "border-emerald-300 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40"
+            : recovery.rating === "caution"
+            ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40"
+            : "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950/40"
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Recovery score</p>
+              <p className="mt-1 text-2xl font-extrabold text-zinc-900 dark:text-white">{recovery.score}/100</p>
+            </div>
+            <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${
+              recovery.rating === "ready"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                : recovery.rating === "caution"
+                ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                : "bg-red-500/15 text-red-700 dark:text-red-300"
+            }`}>
+              {recovery.rating}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{recovery.summary}</p>
+          <div className="mt-2 flex gap-3 text-[10px] text-zinc-500 dark:text-zinc-400">
+            <span>Sleep: {recovery.components.sleep}%</span>
+            <span>Training: {recovery.components.training}%</span>
+            <span>Rest: {recovery.components.rest}%</span>
+          </div>
+        </div>
+
+        {/* Gamification: streak + badges */}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-950/40">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Daily streak</p>
+            <span className="text-lg font-extrabold text-amber-600 dark:text-amber-400">🔥 {streak} day{streak !== 1 ? "s" : ""}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {badges.map((b) => (
+              <span
+                key={b.label}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  b.earned
+                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-600"
+                }`}
+                title={b.earned ? `Earned: ${b.label}` : `Not yet: ${b.label}`}
+              >
+                <span>{b.emoji}</span>
+                <span>{b.label}</span>
+              </span>
+            ))}
+          </div>
+          {badgesEarned > 0 && (
+            <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+              {badgesEarned}/{badges.length} badges earned today
+            </p>
+          )}
+        </div>
+
+        {/* Unified Vitality Index */}
+        {(() => {
+          const trendRate = weightTrend.length >= 2
+            ? (weightTrend[weightTrend.length - 1].value - weightTrend[0].value) / Math.max(1, (new Date(weightTrend[weightTrend.length - 1].date).getTime() - new Date(weightTrend[0].date).getTime()) / (7 * 24 * 60 * 60 * 1000))
+            : undefined;
+          const vitality = computeVitality({
+            profile,
+            mealPlan: plan,
+            sleepScore: sleepQuality?.score,
+            waterGlasses: water,
+            waterGoal: WATER_GOAL,
+            habitsDone: doneCount,
+            habitsTotal: habits.length,
+            weightTrendKgPerWeek: trendRate,
+            dayOfWeek: today,
+          });
+          return (
+            <div className={`rounded-xl border p-4 ${vitalityBg(vitality.score)} transition`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Vitality index</p>
+                  <p className={`mt-1 text-3xl font-extrabold ${vitalityColor(vitality.score)}`}>{vitality.score}/100</p>
+                </div>
+                <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase ${vitalityColor(vitality.score)} bg-white/50 dark:bg-black/20`}>
+                  {vitality.rating}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{vitality.summary}</p>
+              <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">💡 {vitality.suggestion}</p>
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {([
+                  { label: "Sleep", score: vitality.components.sleep, weight: "30%" },
+                  { label: "Nutrition", score: vitality.components.nutrition, weight: "30%" },
+                  { label: "Exercise", score: vitality.components.exercise, weight: "25%" },
+                  { label: "Body", score: vitality.components.body, weight: "15%" },
+                ] as const).map((c) => (
+                  <div key={c.label} className="text-center">
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">{c.label} ({c.weight})</p>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+                      <div className={`h-full rounded-full ${vitalityColor(c.score).replace("text-", "bg-").replace("dark:text-", "dark:bg-")}`} style={{ width: `${c.score}%` }} />
+                    </div>
+                    <p className="mt-0.5 text-[10px] font-bold text-zinc-700 dark:text-zinc-300">{c.score}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* JITAI Coaching Tips */}
+        {(() => {
+          const tips = generateCoachingTips({
+            profile,
+            mealPlan: plan,
+            hour: new Date().getHours(),
+            dayOfWeek: new Date().getDay(),
+            waterGlasses: water,
+            waterGoal: WATER_GOAL,
+            habitsDone: doneCount,
+            habitsTotal: habits.length,
+            sleepScore: sleepQuality?.score,
+            streak,
+            recoveryScore: recovery.score,
+          });
+          if (tips.length === 0) return null;
+          return (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky-600 dark:text-sky-400">
+                {timeGreeting(new Date().getHours())}Smart tips for you
+              </p>
+              <div className="mt-2 space-y-2">
+                {tips.map((tip) => (
+                  <div key={tip.id} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 text-sm">{tip.emoji}</span>
+                    <div>
+                      <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">{tip.message}</p>
+                      {tip.detail && (
+                        <p className="mt-0.5 text-[10px] leading-4 text-zinc-500 dark:text-zinc-400">{tip.detail}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Water + habits quick actions */}
         <div className="grid gap-3 sm:grid-cols-2">

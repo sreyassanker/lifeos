@@ -5,7 +5,7 @@ import { DEFAULT_PROFILE, EVERYDAY_STARS, GOALS, HARVARD_PLATE, macrosFor } from
 import type { Goal, Profile } from "@/app/lib/macros";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 import { regionForCountry, guidanceForRegion } from "@/app/lib/regions";
-import { FOODS, foodById, foodExcluded } from "@/app/lib/foods";
+import { FOODS, foodById, foodExcluded, giCategory, glycemicLoad, MICRONUTRIENT_RDAS, totalNutrients } from "@/app/lib/foods";
 import { planDay, shoppingList, totalsOf } from "@/app/lib/meal-plan";
 import type { MealPlan } from "@/app/lib/meal-plan";
 
@@ -191,6 +191,18 @@ export default function NutritionTab() {
                           P {Math.round((food.per100g.proteinG * item.grams) / 100)}g · C{" "}
                           {Math.round((food.per100g.carbsG * item.grams) / 100)}g · F{" "}
                           {Math.round((food.per100g.fatG * item.grams) / 100)}g
+                          {food.gi !== undefined && (() => {
+                            const cat = giCategory(food.gi);
+                            const gl = glycemicLoad(food);
+                            const color = cat === "low" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                              : cat === "medium" ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                              : "bg-red-500/10 text-red-700 dark:text-red-300";
+                            return (
+                              <span className={`ml-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${color}`}>
+                                GI {food.gi}{gl !== undefined ? ` · GL ${gl}` : ""}
+                              </span>
+                            );
+                          })()}
                         </p>
                       </div>
                       {options.length > 0 && (
@@ -231,6 +243,68 @@ export default function NutritionTab() {
           {macroChip("C", plan.totals.carbsG, result.carbsG)}
           {macroChip("F", plan.totals.fatG, result.fatG)}
         </div>
+      </Card>
+
+      {/* Micronutrient dashboard */}
+      <Card
+        title="Micronutrient coverage"
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2v20M2 12h20" strokeLinecap="round" />
+            <circle cx="12" cy="12" r="4" />
+          </svg>
+        }
+      >
+        <p className="text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+          Based on your meal plan today vs. USDA RDA for adults 19–50 (Paper #31). Key nutrients to watch: iron, calcium, vitamin D, B12, zinc, magnesium, fiber.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {(() => {
+            const allItems = plan.meals.flatMap((m) => m.items);
+            const daily = totalNutrients(allItems);
+            // Also add fiber from per100g
+            let totalFiber = 0;
+            for (const item of allItems) {
+              const food = foodById(item.foodId);
+              if (food) totalFiber += (food.per100g.fiberG * item.grams) / 100;
+            }
+            daily.fiberG = Math.round(totalFiber * 10) / 10;
+
+            const nutrientKeys: { key: string; rdaKey: string }[] = [
+              { key: "ironMg", rdaKey: "Iron" },
+              { key: "calciumMg", rdaKey: "Calcium" },
+              { key: "vitaminDIU", rdaKey: "Vitamin D" },
+              { key: "vitaminB12Mcg", rdaKey: "Vitamin B12" },
+              { key: "zincMg", rdaKey: "Zinc" },
+              { key: "magnesiumMg", rdaKey: "Magnesium" },
+              { key: "fiberG", rdaKey: "Fiber" },
+            ];
+
+            return nutrientKeys.map(({ key, rdaKey }) => {
+              const rda = MICRONUTRIENT_RDAS.find((r) => r.label === rdaKey);
+              if (!rda) return null;
+              const consumed = daily[key] ?? 0;
+              const target = profile.sex === "male" ? rda.male : rda.female;
+              const pct = Math.min(100, Math.round((consumed / target) * 100));
+              const color = pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+              return (
+                <div key={key} className="rounded-xl border border-zinc-100 bg-zinc-50/60 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950/40">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{rda.label}</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400">{consumed}/{target} {rda.unit}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-zinc-400 dark:text-zinc-500">{pct}% RDA</p>
+                </div>
+              );
+            });
+          })()}
+        </div>
+        <p className="mt-3 text-[11px] text-zinc-400 dark:text-zinc-500">
+          Nutrient data from USDA FoodData Central. Some foods have incomplete data — eat a variety to cover all bases.
+        </p>
       </Card>
 
       {/* Shopping list */}
