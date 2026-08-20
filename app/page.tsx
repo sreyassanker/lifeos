@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import LifeOsApp from "@/app/components/LifeOsApp";
 
 function scrollToId(id: string) {
@@ -55,6 +57,16 @@ const sources = [
 ];
 
 export default function Home() {
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    setIsNative(Capacitor.isNativePlatform());
+  }, []);
+
+  if (isNative) {
+    return <LifeOsApp />;
+  }
+
   return (
     <>
       {/* Hero */}
