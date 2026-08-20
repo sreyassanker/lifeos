@@ -17,7 +17,7 @@ A free, privacy-first, scientifically-grounded health platform — available as 
 [![Capacitor](https://img.shields.io/badge/Capacitor-8-blue?logo=capacitor)](https://capacitorjs.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
-[Web App](https://lifeos.vercel.app) · [Download APK](#-android-apk) · [Features](#-features) · [Research](#-research) · [Architecture](#-architecture)
+[Web App](https://lifeos-health.vercel.app) · [Download APK](#-android-apk) · [Features](#-features) · [Research](#-research) · [Architecture](#-architecture)
 
 <p align="center">
   <img src="./public/Screenshot.png" alt="LifeOS screenshot" width="360" style="border-radius: 16px;" />
@@ -362,6 +362,6 @@ MIT — free to use, modify, and share.
 
 **Built with evidence, not trends.**
 
-[Web App](https://lifeos.vercel.app) · [GitHub](https://github.com/sreyassanker/lifeos) · [Download APK](#-android-apk)
+[Web App](https://lifeos-health.vercel.app) · [GitHub](https://github.com/sreyassanker/lifeos) · [Download APK](#-android-apk)
 
 </div>
