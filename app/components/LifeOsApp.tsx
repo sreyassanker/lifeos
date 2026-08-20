@@ -132,18 +132,17 @@ export default function LifeOsApp() {
   const [tabDirection, setTabDirection] = useState<"in" | "out">("in");
   const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const [settings] = useLocalStorage(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+  const [launching, setLaunching] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("lifeos-onboarded");
   });
-  const [launching, setLaunching] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const tabOrder: TabId[] = ["today", "body", "sleep", "routine", "nutrition", "fitness", "workout", "meals", "hr", "settings"];
 
   // Apply theme on startup + follow system changes independently of tab
   useEffect(() => applyTheme(settings.darkMode), [settings.darkMode]);
 
-  // Determine first-visit state synchronously (above) so no home-page flash
   useEffect(() => {
     const timer = setTimeout(() => setLoaded(true), 300);
     return () => clearTimeout(timer);
@@ -152,8 +151,11 @@ export default function LifeOsApp() {
   const handleOnboardingComplete = (p: Profile) => {
     setProfile(p);
     localStorage.setItem("lifeos-onboarded", "true");
-    setShowOnboarding(false);
+    setNeedsOnboarding(false);
   };
+
+  // Stable identity so the splash effect never resets its timers.
+  const finishLaunch = useCallback(() => setLaunching(false), []);
 
   const switchTab = useCallback((newTab: TabId) => {
     if (newTab === tab) return;
@@ -166,10 +168,10 @@ export default function LifeOsApp() {
   }, [tab]);
 
   if (launching) {
-    return <LaunchSplash onFinish={() => setLaunching(false)} />;
+    return <LaunchSplash onFinish={finishLaunch} />;
   }
 
-  if (showOnboarding) {
+  if (needsOnboarding) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;
   }
 

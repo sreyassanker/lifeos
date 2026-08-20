@@ -12,6 +12,14 @@
 //   supplementation (3–5 g/day monohydrate) due to lower baseline stores.
 //   (Gutiérrez-Hellín et al. 2025; Wang et al. 2024: +4.43 kg upper-body, +11.35 kg
 //   lower-body strength with creatine + RT in adults <50).
+// - When body composition is known (US Navy estimate from the Body tab, or a
+//   verified body-fat % from a weekly check-in), BMR shifts from Mifflin-St Jeor to
+//   Katch-McArdle on fat-free mass (FFM) and protein is dosed on lean mass. This
+//   makes targets composition-aware: two people of the same bodyweight get
+//   different targets if their body fat differs.
+
+import { bodyFatNavy } from "@/app/lib/body";
+import type { Measurements } from "@/app/lib/body";
 
 export type Sex = "male" | "female";
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very_active";
@@ -49,6 +57,8 @@ export interface Profile {
   measurements?: Partial<import("@/app/lib/body").Measurements>;
   /** Target body-fat % chosen in the Body tab — drives the goal avatar + projection. */
   targetBodyFat?: number;
+  /** Verified body-fat % (from a weekly check-in or adopted from the Navy estimate) — drives the body-fat-aware BMR and lean-mass protein targets. */
+  bodyFatPct?: number;
   diet: Diet;
   allergies: string[];
   mealsPerDay: 3 | 4 | 5;
@@ -91,9 +101,33 @@ export const GOALS: { id: Goal; label: string; calAdjust: number; protein: [numb
   },
 ];
 
+/**
+ * Best available body-fat %, with its source of truth. Prefers the verified value
+ * (profile.bodyFatPct, from a check-in or adopted manually); falls back to the
+ * US Navy estimate from body measurements when all inputs are valid.
+ */
+export function effectiveBodyFat(p: Profile): { pct: number; source: "manual" | "navy" } | null {
+  if (p.bodyFatPct != null && p.bodyFatPct > 0 && p.bodyFatPct < 70) {
+    return { pct: p.bodyFatPct, source: "manual" };
+  }
+  const m = p.measurements;
+  if (m && m.neckCm && m.waistCm && m.hipCm) {
+    const bf = bodyFatNavy(m as Measurements, p.sex, p.heightCm);
+    if (bf != null && bf > 0 && bf < 70) return { pct: bf, source: "navy" };
+  }
+  return null;
+}
+
 export function bmr(p: Profile): number {
+  const bf = effectiveBodyFat(p);
+  if (bf) {
+    // Katch-McArdle: BMR = 370 + 21.6 × FFM(kg) — the standard body-composition
+    // equation. FFM is derived from weight × (1 − body fat %).
+    const ffm = p.weightKg * (1 - bf.pct / 100);
+    return Math.round(370 + 21.6 * ffm);
+  }
   const base = 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age;
-  return p.sex === "male" ? base + 5 : base - 161;
+  return Math.round(p.sex === "male" ? base + 5 : base - 161);
 }
 
 export function tdee(p: Profile): number {
@@ -109,14 +143,25 @@ export interface MacroResult {
   proteinRange: string;
   waterL: number;
   note: string;
+  /** Which equation produced the calorie target. */
+  calorieMethod: "mifflin-st-jeor" | "katch-mcardle";
+  /** What protein is dosed on — lean mass when body fat is known. */
+  proteinBasis: "bodyweight" | "lean-mass";
+  /** Body-fat % actually used (null when body composition is unknown). */
+  bodyFatUsedPct?: number;
 }
 
 export function macrosFor(p: Profile): MacroResult {
   const goal = GOALS.find((g) => g.id === p.goal) ?? GOALS[0];
   const calories = Math.max(1200, tdee(p) + goal.calAdjust);
 
-  // Protein in the middle of the goal's evidence-based range.
-  const proteinG = Math.round(p.weightKg * ((goal.protein[0] + goal.protein[1]) / 2));
+  // Protein basis: lean mass (weight × (1 − body fat)) when body composition is
+  // known, so high-body-fat individuals aren't over-dosed on protein. Never below
+  // the RDA floor of 0.8 g/kg of total bodyweight.
+  const bf = effectiveBodyFat(p);
+  const basisKg = bf ? p.weightKg * (1 - bf.pct / 100) : p.weightKg;
+  const proteinMid = (goal.protein[0] + goal.protein[1]) / 2;
+  const proteinG = Math.max(0, Math.round(Math.max(p.weightKg * 0.8, basisKg * proteinMid)));
 
   // Fat ~0.8–1 g/kg (supports hormones; enough to keep meals palatable).
   const fatG = Math.round(p.weightKg * 0.9);
@@ -126,14 +171,22 @@ export function macrosFor(p: Profile): MacroResult {
   // NASEM adequate intake for total water: 3.7 L/day men, 2.7 L/day women.
   const waterL = p.sex === "male" ? 3.7 : 2.7;
 
+  const method = bf ? "katch-mcardle" : "mifflin-st-jeor";
+  const note = bf
+    ? `Body-fat aware: ${Math.round(calories)} kcal priced on your ~${bf.pct.toFixed(0)}% body fat (Katch-McArdle), protein on lean mass. ${goal.note}`
+    : goal.note;
+
   return {
     calories,
     proteinG,
     carbsG,
     fatG,
-    proteinRange: `${Math.round(p.weightKg * goal.protein[0])}–${Math.round(p.weightKg * goal.protein[1])} g`,
+    proteinRange: `${Math.round(basisKg * goal.protein[0])}–${Math.round(basisKg * goal.protein[1])} g`,
     waterL,
-    note: goal.note,
+    note,
+    calorieMethod: method,
+    proteinBasis: bf ? "lean-mass" : "bodyweight",
+    bodyFatUsedPct: bf ? bf.pct : undefined,
   };
 }
 
@@ -176,6 +229,8 @@ export const HARVARD_PLATE: FoodGroup[] = [
 // Monitors weight trend over 2+ weeks and adjusts TDEE if progress stalls.
 // Based on: if weight loss < 0.2 kg/week during a cut → reduce by 100 kcal;
 //           if weight loss > 1 kg/week → increase by 100 kcal (too aggressive).
+// When body-fat history is available, it also recognizes "recomposition": weight
+// flat but body fat still dropping means fat is still coming off — no calorie cut.
 export interface AdaptiveResult {
   adjustedCalories: number;
   trendKgPerWeek: number;
@@ -183,10 +238,26 @@ export interface AdaptiveResult {
   reason: string;
 }
 
+export interface AdaptiveOptions {
+  bodyFatHistory?: { date: string; value: number }[];
+  bodyFatPct?: number;
+}
+
+/** Per-week body-fat slope (negative = decreasing). Null when data is insufficient. */
+function bodyFatTrendPerWeek(history?: { date: string; value: number }[]): number | null {
+  if (!history || history.length < 2) return null;
+  const first = history[0];
+  const last = history[history.length - 1];
+  const daysDiff = (new Date(last.date).getTime() - new Date(first.date).getTime()) / (1000 * 60 * 60 * 24);
+  if (daysDiff < 7) return null;
+  return (last.value - first.value) / (daysDiff / 7);
+}
+
 export function adaptiveCalories(
   currentCalories: number,
   weightHistory: { date: string; value: number }[],
-  goal: Goal
+  goal: Goal,
+  opts: AdaptiveOptions = {}
 ): AdaptiveResult {
   if (weightHistory.length < 3) {
     return { adjustedCalories: currentCalories, trendKgPerWeek: 0, adjustment: 0, reason: "Need at least 3 weigh-ins to estimate trend." };
@@ -202,11 +273,17 @@ export function adaptiveCalories(
   const weeksDiff = daysDiff / 7;
   const trendKgPerWeek = (last.value - first.value) / weeksDiff;
 
+  const bfTrendPerWk = bodyFatTrendPerWeek(opts.bodyFatHistory);
+
   let adjustment = 0;
   let reason = "";
 
   if (goal === "cut") {
-    if (trendKgPerWeek > -0.1) {
+    if (trendKgPerWeek > -0.1 && bfTrendPerWk !== null && bfTrendPerWk < -0.15) {
+      // Weight stalled but body fat dropping — recomposition in progress.
+      adjustment = 0;
+      reason = `Weight stalled (${trendKgPerWeek.toFixed(2)} kg/week) but body fat is dropping ${bfTrendPerWk.toFixed(2)}%/wk — you're recomposing. Holding calories.`;
+    } else if (trendKgPerWeek > -0.1) {
       // Weight not dropping — reduce calories
       adjustment = -100;
       reason = `Weight stalled (${trendKgPerWeek.toFixed(2)} kg/week). Reducing by 100 kcal.`;
@@ -216,6 +293,7 @@ export function adaptiveCalories(
       reason = `Losing too fast (${trendKgPerWeek.toFixed(2)} kg/week). Increasing by 100 kcal to preserve muscle.`;
     } else {
       reason = `Good progress (${trendKgPerWeek.toFixed(2)} kg/week). No adjustment needed.`;
+      if (opts.bodyFatPct !== undefined) reason += ` Body fat ${opts.bodyFatPct.toFixed(1)}%.`;
     }
   } else if (goal === "lean_bulk" || goal === "bulk") {
     if (trendKgPerWeek < 0.05) {

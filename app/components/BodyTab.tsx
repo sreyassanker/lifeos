@@ -21,6 +21,7 @@ import { ACTIVITY_LEVELS, DEFAULT_PROFILE, DIETS, GOALS, macrosFor, adaptiveCalo
 import type { ActivityLevel, Diet, Goal, Profile } from "@/app/lib/macros";
 import { trend } from "@/app/lib/progress";
 import type { CheckIn } from "@/app/lib/progress";
+import { getBodyFatHistory } from "@/app/lib/body-history";
 import { COUNTRIES, statesForCountry } from "@/app/lib/regions";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 import { DEFAULT_SETTINGS, type AppSettings, SETTINGS_STORAGE_KEY } from "@/app/lib/settings";
@@ -108,11 +109,16 @@ export default function BodyTab() {
   const macros = macrosFor(profile);
   const [progress] = useLocalStorage<CheckIn[]>("lifeos-progress", []);
   const weightTrend = useMemo(() => trend(progress, "weightKg", 10), [progress]);
-  const adaptive = useMemo(() => adaptiveCalories(macros.calories, weightTrend, profile.goal), [macros.calories, weightTrend, profile.goal]);
+  const bfHistory = getBodyFatHistory().slice(-8)
 
   const bf = useMemo(
     () => (hasCore ? bodyFatNavy(measurements as Measurements, profile.sex, heightCm) : null),
     [hasCore, measurements, profile.sex, heightCm]
+  );
+
+  const adaptive = useMemo(
+    () => adaptiveCalories(macros.calories, weightTrend, profile.goal, { bodyFatHistory: bfHistory, bodyFatPct: profile.bodyFatPct ?? bf ?? undefined }),
+    [macros.calories, weightTrend, profile.goal, bfHistory, profile.bodyFatPct, bf]
   );
   const bmiValue = useMemo(() => bmi(weightKg, heightCm), [weightKg, heightCm]);
   const shape = useMemo(
@@ -287,7 +293,12 @@ export default function BodyTab() {
           )}
         </div>
         <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          {ACTIVITY_LEVELS.find((a) => a.id === profile.activity)?.example} · Calories via Mifflin-St Jeor + activity factor.
+          {ACTIVITY_LEVELS.find((a) => a.id === profile.activity)?.example} · Calories via{" "}
+          {macros.calorieMethod === "katch-mcardle" ? "Katch-McArdle (uses your body fat)" : "Mifflin-St Jeor"} + activity
+          factor.
+          {macros.bodyFatUsedPct !== undefined && (
+            <span> · Using your ~{macros.bodyFatUsedPct.toFixed(0)}% body fat for energy & protein.</span>
+          )}
           {profile.country && (
             <span> · Region: {COUNTRIES.find((c) => c.id === profile.country)?.label}{
               profile.state && statesForCountry(profile.country).find((s) => s.id === profile.state)
@@ -440,9 +451,10 @@ export default function BodyTab() {
             markers.
           </p>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <StatCard
-              label="Body fat (Navy)"
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <StatCard
+                label="Body fat (Navy)"
               value={bf !== null ? `${bf.toFixed(1)}%` : "—"}
               sub={`${bodyFatCategory(bf ?? 0, profile.sex)} range · ±3% accuracy — track the trend`}
               accent
@@ -471,6 +483,36 @@ export default function BodyTab() {
             )}
             {somato && <StatCard label="Frame tendency" value={somato.label} sub={somato.note} />}
           </div>
+          {bf !== null && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <span>
+                Navy estimate: <strong>{bf.toFixed(1)}%</strong>.
+              </span>
+              {profile.bodyFatPct === undefined ? (
+                <button
+                  onClick={() => setProfile((p) => ({ ...p, bodyFatPct: Number(bf!.toFixed(1)) }))}
+                  className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                >
+                  Use this for calories & protein
+                </button>
+              ) : profile.bodyFatPct !== Number(bf.toFixed(1)) ? (
+                <>
+                  <span>
+                    Your targets use saved <strong>{profile.bodyFatPct}%</strong> (from your check-in).
+                  </span>
+                  <button
+                    onClick={() => setProfile((p) => ({ ...p, bodyFatPct: Number(bf!.toFixed(1)) }))}
+                    className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 font-semibold text-zinc-600 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                  >
+                    Update to {bf.toFixed(1)}%
+                  </button>
+                </>
+              ) : (
+                <span>Your targets already use this value.</span>
+              )}
+            </div>
+          )}
+          </>
         )}
         {shape && (
           <p className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50/60 px-4 py-3 text-xs leading-5 text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">

@@ -128,6 +128,7 @@ export default function DashboardTab() {
 
   const weightTrend = useMemo(() => trend(progress, "weightKg"), [progress]);
   const estBf = useMemo(() => {
+    if (profile.bodyFatPct != null) return profile.bodyFatPct;
     const m = profile.measurements;
     if (m && m.neckCm && m.waistCm && m.hipCm)
       return bodyFatNavy(m as Measurements, profile.sex, profile.heightCm);
@@ -142,7 +143,13 @@ export default function DashboardTab() {
       bodyFatPct: bfInput ? Number(bfInput) : undefined,
     };
     setProgress((prev) => upsertCheckIn(prev, entry));
-    if (entry.weightKg) setProfile((p) => ({ ...p, weightKg: entry.weightKg! }));
+    if (entry.weightKg || entry.bodyFatPct) {
+      setProfile((p) => ({
+        ...p,
+        ...(entry.weightKg ? { weightKg: entry.weightKg } : {}),
+        ...(entry.bodyFatPct ? { bodyFatPct: entry.bodyFatPct } : {}),
+      }));
+    }
     awardXP("LOG_MEASUREMENT", "Logged weekly check-in");
     showToast("Check-in saved!", "success");
   };
