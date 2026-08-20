@@ -24,7 +24,7 @@ function getAllData(): Record<string, unknown> {
 function setAllData(data: Record<string, unknown>) {
   for (const [key, value] of Object.entries(data)) {
     if (key.startsWith(STORAGE_PREFIX)) {
-      localStorage.setItem(key, typeof value === "string" ? value : JSON.stringify(value));
+      localStorage.setItem(key, JSON.stringify(value));
     }
   }
 }

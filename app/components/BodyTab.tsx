@@ -23,6 +23,7 @@ import { trend } from "@/app/lib/progress";
 import type { CheckIn } from "@/app/lib/progress";
 import { COUNTRIES, statesForCountry } from "@/app/lib/regions";
 import { useLocalStorage } from "@/app/lib/use-local-state";
+import { DEFAULT_SETTINGS, type AppSettings, SETTINGS_STORAGE_KEY } from "@/app/lib/settings";
 
 const inputCls =
   "w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 dark:border-zinc-700 dark:bg-zinc-950/50 dark:text-zinc-200";
@@ -73,7 +74,10 @@ const MEASUREMENT_FIELDS: { key: keyof Measurements; label: string; hint?: strin
 
 export default function BodyTab() {
   const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
-  const [units, setUnits] = useState<"cm" | "in">("cm");
+  const [settings, setSettings] = useLocalStorage<AppSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
+  const units = settings.units === "imperial" ? ("in" as const) : ("cm" as const);
+  const setUnits = (u: "cm" | "in") =>
+    setSettings((prev) => ({ ...prev, units: u === "in" ? "imperial" : "metric" }));
   const [allergiesText, setAllergiesText] = useState(profile.allergies.join(", "));
 
   const measurements = useMemo(() => profile.measurements ?? {}, [profile.measurements]);

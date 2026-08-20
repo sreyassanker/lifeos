@@ -5,7 +5,7 @@
 // of strength and hypertrophy gains. Tracking volume (sets × reps × weight) over
 // time enables data-driven program adjustments.
 
-import { WEEK_PLAN, type PlanItem } from "@/app/lib/fitness";
+import { WEEK_PLAN, todayPlanIndex, type PlanItem } from "@/app/lib/fitness";
 
 export interface LoggedSet {
   reps: number;
@@ -303,8 +303,7 @@ export function todayWorkoutStatus(): {
   caloriesBurned: number;
 } {
   const today = new Date().toISOString().split("T")[0];
-  const dayOfWeek = new Date().getDay(); // 0=Sun
-  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Map to WEEK_PLAN index
+  const dayIndex = todayPlanIndex(); // Map to WEEK_PLAN index (0=Mon…6=Sun)
   
   const logs = getLogsForDate(today);
   const log = logs.find((l) => l.dayIndex === dayIndex);

@@ -18,11 +18,7 @@ export const metadata: Metadata = {
     "Free, evidence-based tools for sleep, daily routine, nutrition, and fitness. Sleep cycle calculator, chronotype planner, habit tracker, macro calculator, and a science-based six-pack plan — no registration, private by design.",
   icons: {
     icon: "/icon.svg",
-    apple: "/icon-192.png",
-    other: [
-      { rel: "icon", type: "image/png", sizes: "192x192", url: "/icon-192.png" },
-      { rel: "icon", type: "image/png", sizes: "512x512", url: "/icon-512.png" },
-    ],
+    apple: "/icon.svg",
   },
 };
 
@@ -40,13 +36,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="manifest" href="/manifest.json" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <script
+          async
+          dangerouslySetInnerHTML={{
+            __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }`,
+          }}
+        />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }`,
-        }}
-      />
     </html>
   );
 }

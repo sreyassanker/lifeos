@@ -19,9 +19,7 @@
   }
 }
 
-html {
-  scroll-behavior: smooth;
-}
+
 
 body {
   background: var(--background);
@@ -63,6 +61,53 @@ body {
 }
 .badge-earned {
   animation: badgePulse 0.5s ease;
+}
+
+/* ── Launch splash ─────────────────────────────────────────────── */
+.splash-logo {
+  transform-origin: center;
+  animation: splashLogoIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes splashLogoIn {
+  0% { opacity: 0; transform: scale(0.5) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+.splash-ring {
+  animation: splashRing 1.8s ease-out infinite;
+}
+@keyframes splashRing {
+  0% { opacity: 0.9; transform: scale(0.9); }
+  70% { opacity: 0; transform: scale(1.5); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.splash-fade-up {
+  animation: splashFadeUp 0.6s ease 0.35s both;
+}
+.splash-fade-up-2 {
+  animation: splashFadeUp 0.6s ease 0.55s both;
+}
+@keyframes splashFadeUp {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.splash-bar {
+  animation: splashBar 1.3s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both;
+}
+@keyframes splashBar {
+  0% { transform: translateX(-110%); }
+  70% { transform: translateX(0%); }
+  100% { transform: translateX(0%); }
+}
+.splash-drift {
+  animation: splashDrift 6s ease-in-out infinite;
+}
+.splash-drift-rev {
+  animation: splashDrift 7s ease-in-out infinite reverse;
+}
+@keyframes splashDrift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(28px, 22px); }
 }
 
 /* Skeleton shimmer */

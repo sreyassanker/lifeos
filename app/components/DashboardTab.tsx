@@ -12,16 +12,17 @@ import { bodyFatNavy } from "@/app/lib/body";
 import type { Measurements } from "@/app/lib/body";
 import { latest, todayKey, trend, upsertCheckIn, computeRecovery } from "@/app/lib/progress";
 import type { CheckIn } from "@/app/lib/progress";
-import { WEEK_PLAN } from "@/app/lib/fitness";
+import { WEEK_PLAN, todayPlanIndex, isRestPlanDay } from "@/app/lib/fitness";
 import { computeSleepQuality } from "@/app/lib/sleep";
 import { generateCoachingTips, timeGreeting } from "@/app/lib/coaching";
 import { computeVitality, vitalityColor, vitalityBg } from "@/app/lib/vitality";
 import { useLocalStorage } from "@/app/lib/use-local-state";
+import { awardXP } from "@/app/lib/gamification";
 import { FadeIn, AnimatedNumber, AnimatedBar, showToast } from "@/app/lib/animations";
 import DataManager from "@/app/components/DataManager";
 import WeeklyReport from "@/app/components/WeeklyReport";
+import GamificationPanel from "@/app/components/GamificationPanel";
 
-const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WATER_GOAL = 8;
 
 function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
@@ -54,8 +55,8 @@ export default function DashboardTab() {
   const [waistInput, setWaistInput] = useState<string>(latest(progress, "waistCm") ? String(latest(progress, "waistCm")) : "");
   const [bfInput, setBfInput] = useState<string>(latest(progress, "bodyFatPct") ? String(latest(progress, "bodyFatPct")) : "");
 
-  const today = new Date().getDay();
-  const todayPlan = WEEK_PLAN.find((d) => d.day === dayNames[today]);
+  const todayIdx = todayPlanIndex();
+  const todayPlan = WEEK_PLAN[todayIdx];
 
   // Recovery score computation
   const [bed] = useLocalStorage<string>("lifeos-bed", "23:00");
@@ -67,23 +68,23 @@ export default function DashboardTab() {
     return computeSleepQuality({ bedTime: bed, wakeTime: wake, fallAsleepMin, awakenings });
   }, [bed, wake, fallAsleepMin, awakenings]);
 
-  const isRestDay = today === 6 || today === 0; // Sat or Sun
+  const isRestDay = isRestPlanDay(todayIdx);
   const workoutsCompleted = useMemo(() => {
     let count = 0;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i <= todayIdx; i++) {
       const day = WEEK_PLAN[i];
-      if (day && (day.totalMin ?? 0) > 0 && i <= today) count++;
+      if (day && (day.totalMin ?? 0) > 0) count++;
     }
     return count;
-  }, [today]);
+  }, [todayIdx]);
 
   const recovery = useMemo(() => computeRecovery({
     sleepScore: sleepQuality?.score ?? 75,
     workoutsCompleted,
     workoutsPlanned: 6,
     isRestDay,
-    consecutiveActiveDays: isRestDay ? 0 : Math.min(today, 6),
-  }), [sleepQuality, workoutsCompleted, isRestDay, today]);
+    consecutiveActiveDays: isRestDay ? 0 : todayIdx + 1,
+  }), [sleepQuality, workoutsCompleted, isRestDay, todayIdx]);
 
   const bedtime = useMemo(() => (wake ? bedtimesForWake(wake)[1] : null), [wake]);
   const macros = useMemo(() => macrosFor(profile), [profile]);
@@ -142,6 +143,7 @@ export default function DashboardTab() {
     };
     setProgress((prev) => upsertCheckIn(prev, entry));
     if (entry.weightKg) setProfile((p) => ({ ...p, weightKg: entry.weightKg! }));
+    awardXP("LOG_MEASUREMENT", "Logged weekly check-in");
     showToast("Check-in saved!", "success");
   };
 
@@ -272,7 +274,7 @@ export default function DashboardTab() {
             habitsDone: doneCount,
             habitsTotal: habits.length,
             weightTrendKgPerWeek: trendRate,
-            dayOfWeek: today,
+            dayOfWeek: new Date().getDay(),
           });
           return (
             <div className={`rounded-xl border p-4 ${vitalityBg(vitality.score)} transition`}>
@@ -555,7 +557,8 @@ export default function DashboardTab() {
         </div>
       </section></FadeIn>
 
-      <FadeIn delay={500}><WeeklyReport /></FadeIn>
+      <FadeIn delay={500}><GamificationPanel /></FadeIn>
+        <FadeIn delay={550}><WeeklyReport /></FadeIn>
         <FadeIn delay={600}><DataManager /></FadeIn>
     </div>
   );

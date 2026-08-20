@@ -12,7 +12,7 @@ import type { Profile } from "@/app/lib/macros";
 import { macrosFor } from "@/app/lib/macros";
 import type { MealPlan } from "@/app/lib/meal-plan";
 import type { DayPlan } from "@/app/lib/fitness";
-import { WEEK_PLAN } from "@/app/lib/fitness";
+import { WEEK_PLAN, planDayIndex, isRestPlanDay } from "@/app/lib/fitness";
 
 export interface VitalityInput {
   profile: Profile;
@@ -78,15 +78,16 @@ export function computeVitality(input: VitalityInput): VitalityResult {
 
   // ── Exercise component (25%) ───────────────────────────────────────────
   let exerciseScore = 0;
-  const isRestDay = input.dayOfWeek === 0 || input.dayOfWeek === 6;
-  // Count completed workout days this week (simplified: days with planned workouts before today)
+  const planIdx = planDayIndex(input.dayOfWeek); // 0=Mon…6=Sun (WEEK_PLAN order)
+  const isRestDay = isRestPlanDay(planIdx);
+  // Count planned workout days completed before today (completed if its slot has passed)
   let plannedDays = 0;
   let completedDays = 0;
   for (let i = 0; i < 7; i++) {
     const day = WEEK_PLAN[i];
     if (day && (day.totalMin ?? 0) > 0) {
       plannedDays++;
-      if (i <= input.dayOfWeek && !isRestDay) completedDays++;
+      if (i < planIdx || (i === planIdx && !isRestDay)) completedDays++;
     }
   }
   if (plannedDays > 0) {

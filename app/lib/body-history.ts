@@ -2,6 +2,7 @@
 // Provides trend analysis, milestone alerts, and weekly/monthly comparisons.
 
 import type { Measurements } from "@/app/lib/body";
+import type { CheckIn } from "@/app/lib/progress";
 
 export interface MeasurementEntry {
   date: string; // YYYY-MM-DD
@@ -33,20 +34,64 @@ export interface Milestone {
 }
 
 // ── Storage ─────────────────────────────────────────────────────────────
-const STORAGE_KEY = "lifeos-body-history";
+// Body data lives in ONE place: the shared lifeos-progress CheckIn store
+// written by DashboardTab/BodyTab. The legacy lifeos-body-history key is
+// only read for migration so old records keep working.
+const LEGACY_STORAGE_KEY = "lifeos-body-history";
+const PROGRESS_STORAGE_KEY = "lifeos-progress";
+
+/** Map an entry (either shape) to a normalized MeasurementEntry. */
+function toEntry(e: Partial<CheckIn> & Partial<MeasurementEntry>): MeasurementEntry {
+  return {
+    date: e.date ?? "",
+    weightKg: e.weightKg,
+    bodyFatPercent: e.bodyFatPercent ?? e.bodyFatPct,
+    measurements: {
+      ...(e.measurements ?? {}),
+      waistCm: e.measurements?.waistCm ?? e.waistCm,
+    },
+    notes: e.notes,
+    timestamp: e.timestamp ?? (new Date(`${e.date}T00:00:00`).getTime() || 0),
+  };
+}
 
 function getEntries(): MeasurementEntry[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return parsed
+        .map((e) => toEntry(e))
+        .filter((e) => e.date)
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+    // Legacy migration: read the old key if the shared store is empty.
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const legacy = legacyRaw ? JSON.parse(legacyRaw) : [];
+    if (!Array.isArray(legacy)) return [];
+    const mapped = legacy.map((e) => toEntry(e)).filter((e) => e.date);
+    if (mapped.length > 0) {
+      // Adopt legacy records into the shared store so there is one track.
+      localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(mapped));
+      localStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+    return mapped.sort((a, b) => a.date.localeCompare(b.date));
   } catch {
     return [];
   }
 }
 
 function saveEntries(entries: MeasurementEntry[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  // Persist back through the source CheckIn-shaped store so DashboardTab,
+  // WeeklyReport, and gamification all read the same history.
+  const checkIns: CheckIn[] = entries.map((e) => ({
+    date: e.date,
+    weightKg: e.weightKg,
+    waistCm: e.measurements?.waistCm,
+    bodyFatPct: e.bodyFatPercent,
+  }));
+  localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(checkIns));
 }
 
 // ── Add entry ───────────────────────────────────────────────────────────
@@ -72,6 +117,11 @@ export function getMeasurementsBetween(start: string, end: string): MeasurementE
 export function getLatestWeight(): MeasurementEntry | undefined {
   const entries = getEntries().filter((e) => e.weightKg !== undefined);
   return entries[entries.length - 1];
+}
+
+/** Total number of logged body entries (any metric), shared source. */
+export function getMeasurementCount(): number {
+  return getEntries().length;
 }
 
 export function getWeightHistory(): { date: string; value: number }[] {

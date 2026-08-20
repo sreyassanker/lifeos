@@ -11,9 +11,10 @@ import {
   compareWithTarget,
   type MealLog,
 } from "@/app/lib/meal-log";
-import { macrosFor, type Profile } from "@/app/lib/macros";
+import { macrosFor, DEFAULT_PROFILE, type Profile } from "@/app/lib/macros";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 import { giCategory } from "@/app/lib/foods";
+import { awardXP } from "@/app/lib/gamification";
 
 // ── Food Search Modal ───────────────────────────────────────────────────
 function FoodSearchModal({
@@ -198,6 +199,7 @@ function WaterTracker({ date, targetL }: { date: string; targetL: number }) {
   const handleAdd = (ml: number) => {
     addWater(date, ml);
     setWater(getWaterIntake(date));
+    awardXP("LOG_WATER", `Logged ${ml}ml water`);
   };
 
   return (
@@ -231,7 +233,7 @@ function WaterTracker({ date, targetL }: { date: string; targetL: number }) {
 
 // ── Main MealLogger ─────────────────────────────────────────────────────
 export default function MealLogger() {
-  const [profile] = useLocalStorage<Profile>("lifeos-profile", {} as Profile);
+  const [profile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const today = new Date().toISOString().split("T")[0];
   const [showSearch, setShowSearch] = useState(false);
   const [activeSlot, setActiveSlot] = useState<MealLog["meals"][0]["slot"]>("lunch");
@@ -251,6 +253,7 @@ export default function MealLogger() {
   const handleAddFood = useCallback(
     (food: Food, grams: number) => {
       logFood(today, activeSlot, food.id, grams);
+      awardXP("LOG_MEAL", `Logged ${food.name} (${grams}g)`);
       setRefreshKey((k) => k + 1);
     },
     [today, activeSlot]

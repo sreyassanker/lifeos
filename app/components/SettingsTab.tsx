@@ -1,59 +1,21 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useLocalStorage } from "@/app/lib/use-local-state";
-import type { Profile } from "@/app/lib/macros";
+import { DEFAULT_PROFILE, type Profile } from "@/app/lib/macros";
+import { DEFAULT_SETTINGS, type AppSettings, type UnitSystem, SETTINGS_STORAGE_KEY } from "@/app/lib/settings";
 import { hapticLight, hapticMedium, hapticSuccess } from "@/app/lib/haptics";
 import { requestNotificationPermission, scheduleReminders, cancelAllReminders } from "@/app/lib/notifications";
 
-type UnitSystem = "metric" | "imperial";
-
-interface AppSettings {
-  units: UnitSystem;
-  darkMode: "system" | "light" | "dark";
-  notifications: {
-    water: boolean;
-    workout: boolean;
-    sleep: boolean;
-    meal: boolean;
-  };
-  restTimerDuration: number; // seconds
-}
-
-const DEFAULT_SETTINGS: AppSettings = {
-  units: "metric",
-  darkMode: "system",
-  notifications: {
-    water: true,
-    workout: true,
-    sleep: true,
-    meal: false,
-  },
-  restTimerDuration: 90,
-};
-
 export default function SettingsTab() {
-  const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", {} as Profile);
+  const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const [settings, setSettings] = useLocalStorage<AppSettings>(
-    "lifeos-settings",
+    SETTINGS_STORAGE_KEY,
     DEFAULT_SETTINGS
   );
   const [showReset, setShowReset] = useState(false);
 
-  // Apply dark mode
-  useEffect(() => {
-    const root = document.documentElement;
-    if (settings.darkMode === "dark") {
-      root.classList.add("dark");
-    } else if (settings.darkMode === "light") {
-      root.classList.remove("dark");
-    } else {
-      // system
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      if (prefersDark) root.classList.add("dark");
-      else root.classList.remove("dark");
-    }
-  }, [settings.darkMode]);
+  // Dark mode is applied globally by LifeOsApp on startup + when it changes
 
   const updateSetting = <K extends keyof AppSettings>(
     key: K,
@@ -89,7 +51,10 @@ export default function SettingsTab() {
   );
 
   const handleReset = () => {
-    localStorage.clear();
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("lifeos-")) localStorage.removeItem(key);
+    }
     window.location.reload();
   };
 
@@ -98,7 +63,11 @@ export default function SettingsTab() {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith("lifeos-")) {
-        data[key] = JSON.parse(localStorage.getItem(key) ?? "null");
+        try {
+          data[key] = JSON.parse(localStorage.getItem(key) ?? "null");
+        } catch {
+          data[key] = localStorage.getItem(key);
+        }
       }
     }
     const blob = new Blob([JSON.stringify(data, null, 2)], {

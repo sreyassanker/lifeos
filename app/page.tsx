@@ -1,4 +1,15 @@
+"use client";
+
 import LifeOsApp from "@/app/components/LifeOsApp";
+
+function scrollToId(id: string) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
 
 const sources = [
   {
@@ -49,27 +60,28 @@ export default function Home() {
       {/* Hero */}
       <header className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-emerald-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-zinc-950">
-          <div className="absolute left-1/2 top-[-10rem] h-[30rem] w-[60rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-emerald-200/60 to-teal-200/50 blur-3xl dark:from-emerald-900/30 dark:to-teal-900/30" />
+          <div className="absolute left-1/2 top-[-10rem] h-[30rem] w-[60rem] -translate-x-1/2 rounded-full bg-gradient-to-br from-emerald-200/60 to-teal-200/50 blur-2xl dark:from-emerald-900/30 dark:to-teal-900/30" />
         </div>
 
         <nav className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
-          <a href="#" className="flex items-center gap-2.5">
+          <button type="button" onClick={scrollToTop} className="flex cursor-pointer items-center gap-2.5">
             <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500/80 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950">
               <img src="/icon.svg?v=2" alt="LifeOS" className="absolute h-[42px] w-[42px]" />
             </span>
             <span className="text-lg font-bold tracking-tight text-zinc-900 dark:text-white">
               Life<span className="text-emerald-600 dark:text-emerald-400">OS</span>
             </span>
-          </a>
+          </button>
           <div className="hidden items-center gap-8 text-sm font-medium text-zinc-600 md:flex dark:text-zinc-300">
-            <a href="#app" className="transition hover:text-zinc-900 dark:hover:text-white">The tools</a>
-            <a href="#evidence" className="transition hover:text-zinc-900 dark:hover:text-white">Science</a>
-            <a
-              href="#app"
+            <button type="button" onClick={() => scrollToId("app")} className="cursor-pointer transition hover:text-zinc-900 dark:hover:text-white">The tools</button>
+            <button type="button" onClick={() => scrollToId("evidence")} className="cursor-pointer transition hover:text-zinc-900 dark:hover:text-white">Science</button>
+            <button
+              type="button"
+              onClick={() => scrollToId("app")}
               className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
             >
               Start today
-            </a>
+            </button>
           </div>
         </nav>
 
@@ -89,15 +101,16 @@ export default function Home() {
             place, private by design.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <a
-              href="#app"
+            <button
+              type="button"
+              onClick={() => scrollToId("app")}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-500"
             >
               Open the tools
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-            </a>
+            </button>
             <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
@@ -159,12 +172,12 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-zinc-200 bg-white py-10 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-          <div className="flex items-center gap-2.5">
+          <button type="button" onClick={scrollToTop} className="flex cursor-pointer items-center gap-2.5">
             <span className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500/80 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950">
               <img src="/icon.svg?v=2" alt="LifeOS" className="absolute h-[42px] w-[42px]" />
             </span>
             <span className="text-sm font-semibold text-zinc-900 dark:text-white">LifeOS</span>
-          </div>
+          </button>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             © {new Date().getFullYear()} LifeOS — Free forever. Everything you enter stays in your browser.
           </p>

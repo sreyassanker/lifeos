@@ -11,10 +11,10 @@ import {
   type HRZone,
 } from "@/app/lib/heart-rate";
 import { useLocalStorage } from "@/app/lib/use-local-state";
-import type { Profile } from "@/app/lib/macros";
+import { DEFAULT_PROFILE, type Profile } from "@/app/lib/macros";
 
 export default function HeartRateZones() {
-  const [profile] = useLocalStorage<Profile>("lifeos-profile", {} as Profile);
+  const [profile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const [restingHR, setRestingHR] = useState(65);
   const [customMaxHR, setCustomMaxHR] = useState<number | undefined>(undefined);
   const [recoveryDrop, setRecoveryDrop] = useState(15);

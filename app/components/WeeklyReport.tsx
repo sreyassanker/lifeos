@@ -2,14 +2,13 @@
 
 import { useMemo } from "react";
 import { useLocalStorage } from "@/app/lib/use-local-state";
-import type { Profile } from "@/app/lib/macros";
-import { macrosFor } from "@/app/lib/macros";
+import { macrosFor, DEFAULT_PROFILE, type Profile } from "@/app/lib/macros";
 import { adherenceScore, weeklyVolumeSummary } from "@/app/lib/workout-log";
 import { weeklyAdherence, mealLogStreak } from "@/app/lib/meal-log";
 import { weeklyBodySummary, weightTrend, milestones } from "@/app/lib/body-history";
 
 export default function WeeklyReport() {
-  const [profile] = useLocalStorage<Profile>("lifeos-profile", {} as Profile);
+  const [profile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const targets = macrosFor(profile);
 
   const workoutAdherence = useMemo(() => adherenceScore(1), []);

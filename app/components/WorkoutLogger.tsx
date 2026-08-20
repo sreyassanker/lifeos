@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { WEEK_PLAN, estimateCaloriesBurn, type PlanItem } from "@/app/lib/fitness";
+import { WEEK_PLAN, estimateCaloriesBurn, todayPlanIndex, type PlanItem } from "@/app/lib/fitness";
 import { logWorkout, getLogsForDate, type WorkoutLog, type LoggedExercise, type LoggedSet } from "@/app/lib/workout-log";
 import { useLocalStorage } from "@/app/lib/use-local-state";
-import type { Profile } from "@/app/lib/macros";
+import { DEFAULT_PROFILE, type Profile } from "@/app/lib/macros";
 import { hapticLight, hapticSuccess, hapticTimerDone } from "@/app/lib/haptics";
+import { awardXP } from "@/app/lib/gamification";
+import { DEFAULT_SETTINGS, type AppSettings, SETTINGS_STORAGE_KEY } from "@/app/lib/settings";
 
 // ── Rest Timer ──────────────────────────────────────────────────────────
 function RestTimer({
@@ -117,12 +119,14 @@ function ExerciseCard({
   logged,
   onLog,
   onStartRest,
+  restSeconds,
 }: {
   item: PlanItem;
   itemIndex: number;
   logged?: LoggedExercise;
   onLog: (exercise: LoggedExercise) => void;
   onStartRest: (seconds: number) => void;
+  restSeconds: number;
 }) {
   const [sets, setSets] = useState<LoggedSet[]>(
     logged?.sets ?? [
@@ -132,6 +136,7 @@ function ExerciseCard({
     ]
   );
   const [notes, setNotes] = useState(logged?.notes ?? "");
+  const [showVideo, setShowVideo] = useState(false);
 
   const updateSet = useCallback(
     (index: number, updates: Partial<LoggedSet>) => {
@@ -189,17 +194,52 @@ function ExerciseCard({
       </div>
 
       {hasDemo && (
-        <a
-          href={`https://youtube.com/watch?v=${item.demo!.videoId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600"
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4L15.8 12l-6.3 3.6z" />
-          </svg>
-          Watch demo
-        </a>
+        <>
+          <button
+            onClick={() => setShowVideo(true)}
+            className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.5 15.6V8.4L15.8 12l-6.3 3.6z" />
+            </svg>
+            Watch
+          </button>
+
+          {showVideo && (
+            <div
+              className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => setShowVideo(false)}
+            >
+              <div
+                className="w-full max-w-lg overflow-hidden rounded-3xl bg-zinc-900 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between px-4 py-3">
+                  <p className="text-sm font-bold text-white">{item.text.split(" — ")[0]}</p>
+                  <button
+                    onClick={() => setShowVideo(false)}
+                    className="rounded-lg bg-white/10 px-3 py-1 text-xs font-semibold text-white transition hover:bg-white/20"
+                  >
+                    ✕ Close
+                  </button>
+                </div>
+                <div className="relative aspect-video w-full bg-black">
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src={`https://www.youtube.com/embed/${item.demo!.videoId}?autoplay=1&rel=0&playsinline=1`}
+                    title={item.text.split(" — ")[0]}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+                {item.demo!.note && (
+                  <p className="px-4 py-3 text-xs text-zinc-300">{item.demo!.note}</p>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="mt-3 space-y-1.5">
@@ -232,7 +272,7 @@ function ExerciseCard({
           onClick={() => {
             handleSave();
             hapticLight();
-            onStartRest(90);
+            onStartRest(restSeconds);
           }}
           className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-500"
         >
@@ -245,15 +285,15 @@ function ExerciseCard({
 
 // ── Main WorkoutLogger ──────────────────────────────────────────────────
 export default function WorkoutLogger() {
-  const [profile] = useLocalStorage<Profile>("lifeos-profile", {} as Profile);
+  const [profile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
+  const [settings] = useLocalStorage<AppSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
   const today = new Date().toISOString().split("T")[0];
-  const dayOfWeek = new Date().getDay();
-  const dayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  const dayIndex = todayPlanIndex();
   const dayPlan = WEEK_PLAN[dayIndex];
 
   const [loggedExercises, setLoggedExercises] = useState<LoggedExercise[]>([]);
   const [showTimer, setShowTimer] = useState(false);
-  const [timerDuration, setTimerDuration] = useState(60);
+  const [timerDuration, setTimerDuration] = useState(settings.restTimerDuration);
   const [saved, setSaved] = useState(false);
 
   // Load existing logs
@@ -302,6 +342,10 @@ export default function WorkoutLogger() {
     };
 
     logWorkout(log);
+    awardXP(
+      log.completed ? "COMPLETE_WORKOUT" : "LOG_WORKOUT",
+      `${dayPlan.day} workout (${log.completed ? "completed" : "partial"})`
+    );
     hapticSuccess();
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -366,6 +410,7 @@ export default function WorkoutLogger() {
           itemIndex={i}
           logged={loggedExercises.find((e) => e.exerciseIndex === i)}
           onLog={handleLogExercise}
+          restSeconds={settings.restTimerDuration}
           onStartRest={(seconds) => {
             setTimerDuration(seconds);
             setShowTimer(true);

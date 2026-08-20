@@ -3,8 +3,6 @@ const CACHE_NAME = "lifeos-v1";
 const ASSETS = [
   "/",
   "/icon.svg",
-  "/icon-192.png",
-  "/icon-512.png",
   "/manifest.json",
 ];
 

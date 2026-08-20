@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback } from "react";
 import DashboardTab from "@/app/components/DashboardTab";
 import BodyTab from "@/app/components/BodyTab";
 import SleepTab from "@/app/components/SleepTab";
@@ -12,9 +12,12 @@ import MealLogger from "@/app/components/MealLogger";
 import HeartRateZones from "@/app/components/HeartRateZones";
 import SettingsTab from "@/app/components/SettingsTab";
 import OnboardingWizard from "@/app/components/OnboardingWizard";
+import LaunchSplash from "@/app/components/LaunchSplash";
 import { DashboardSkeleton } from "@/app/components/Skeleton";
+import { TapButton } from "@/app/lib/animations";
 import { DEFAULT_PROFILE } from "@/app/lib/macros";
 import type { Profile } from "@/app/lib/macros";
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY, applyTheme } from "@/app/lib/settings";
 import { useLocalStorage } from "@/app/lib/use-local-state";
 
 const TABS = [
@@ -123,85 +126,25 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-/* ── Animated number counter ────────────────────────────────────── */
-function AnimatedNumber({ value, duration = 800, suffix = "" }: { value: number; duration?: number; suffix?: string }) {
-  const [display, setDisplay] = useState(0);
-  const ref = useRef<number>(0);
-
-  useEffect(() => {
-    const start = ref.current;
-    const diff = value - start;
-    if (diff === 0) return;
-    const startTime = performance.now();
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(start + diff * eased);
-      setDisplay(current);
-      if (progress < 1) requestAnimationFrame(step);
-      else ref.current = value;
-    };
-    requestAnimationFrame(step);
-  }, [value, duration]);
-
-  return <>{display}{suffix}</>;
-}
-
-/* ── Stagger fade-in wrapper ───────────────────────────────────── */
-function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-  return (
-    <div
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(12px)",
-        transition: "opacity 0.4s ease, transform 0.4s ease",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* ── Tap-feedback button wrapper ───────────────────────────────── */
-function TapButton({ children, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const [pressed, setPressed] = useState(false);
-  return (
-    <button
-      {...props}
-      className={`${className} transition-transform duration-100 ${pressed ? "scale-95" : "scale-100"}`}
-      onMouseDown={() => setPressed(true)}
-      onMouseUp={() => setPressed(false)}
-      onMouseLeave={() => setPressed(false)}
-      onTouchStart={() => setPressed(true)}
-      onTouchEnd={() => setPressed(false)}
-    >
-      {children}
-    </button>
-  );
-}
-
 export default function LifeOsApp() {
   const [tab, setTab] = useState<TabId>("today");
   const [displayTab, setDisplayTab] = useState<TabId>("today");
   const [tabDirection, setTabDirection] = useState<"in" | "out">("in");
   const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [settings] = useLocalStorage(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("lifeos-onboarded");
+  });
+  const [launching, setLaunching] = useState(true);
   const [loaded, setLoaded] = useState(false);
   const tabOrder: TabId[] = ["today", "body", "sleep", "routine", "nutrition", "fitness", "workout", "meals", "hr", "settings"];
 
-  // Check if first visit
+  // Apply theme on startup + follow system changes independently of tab
+  useEffect(() => applyTheme(settings.darkMode), [settings.darkMode]);
+
+  // Determine first-visit state synchronously (above) so no home-page flash
   useEffect(() => {
-    const hasVisited = localStorage.getItem("lifeos-onboarded");
-    if (!hasVisited) setShowOnboarding(true);
-    // Small delay for skeleton to show
     const timer = setTimeout(() => setLoaded(true), 300);
     return () => clearTimeout(timer);
   }, []);
@@ -221,6 +164,10 @@ export default function LifeOsApp() {
       setTabDirection("in");
     }, 150);
   }, [tab]);
+
+  if (launching) {
+    return <LaunchSplash onFinish={() => setLaunching(false)} />;
+  }
 
   if (showOnboarding) {
     return <OnboardingWizard onComplete={handleOnboardingComplete} />;

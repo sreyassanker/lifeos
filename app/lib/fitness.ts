@@ -92,6 +92,22 @@ export function weeklyModerateEquivMin(days: DayPlan[]): number {
   return Math.round(total);
 }
 
+// ── Week-day mapping ────────────────────────────────────────────────────
+// WEEK_PLAN is indexed Monday=0 … Sunday=6, but Date#getDay() returns
+// Sunday=0 … Saturday=6. Single helper so every consumer maps the same way.
+export function planDayIndex(dayOfWeek: number): number {
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+}
+
+export function todayPlanIndex(): number {
+  return planDayIndex(new Date().getDay());
+}
+
+/** Is today (by WEEK_PLAN index) a full rest day (no planned work)? */
+export function isRestPlanDay(index: number): boolean {
+  return (WEEK_PLAN[index]?.totalMin ?? 0) === 0;
+}
+
 export const KEY_FACTS: { fact: string; detail: string }[] = [
   {
     fact: "Abs are made in the kitchen, revealed by diet",
