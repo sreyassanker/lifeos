@@ -1,5 +1,9 @@
 <div align="center">
 
+<p align="center">
+  <img src="./public/icon.svg" alt="LifeOS icon" width="120" height="120" style="border-radius: 28px;" />
+</p>
+
 # LifeOS
 
 ### Your Daily Health & Time Companion
@@ -14,6 +18,10 @@ A free, privacy-first, scientifically-grounded health platform — available as 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 [Web App](https://lifeos.vercel.app) · [Download APK](#-android-apk) · [Features](#-features) · [Research](#-research) · [Architecture](#-architecture)
+
+<p align="center">
+  <img src="./public/Screenshot.png" alt="LifeOS screenshot" width="360" style="border-radius: 16px;" />
+</p>
 
 </div>
 
