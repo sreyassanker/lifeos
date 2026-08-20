@@ -133,10 +133,7 @@ export default function LifeOsApp() {
   const [profile, setProfile] = useLocalStorage<Profile>("lifeos-profile", DEFAULT_PROFILE);
   const [settings] = useLocalStorage(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
   const [launching, setLaunching] = useState(true);
-  const [needsOnboarding, setNeedsOnboarding] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !localStorage.getItem("lifeos-onboarded");
-  });
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const tabOrder: TabId[] = ["today", "body", "sleep", "routine", "nutrition", "fitness", "workout", "meals", "hr", "settings"];
 
@@ -146,6 +143,10 @@ export default function LifeOsApp() {
   useEffect(() => {
     const timer = setTimeout(() => setLoaded(true), 300);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    setNeedsOnboarding(!localStorage.getItem("lifeos-onboarded"));
   }, []);
 
   const handleOnboardingComplete = (p: Profile) => {
@@ -167,12 +168,17 @@ export default function LifeOsApp() {
     }, 150);
   }, [tab]);
 
-  if (launching) {
-    return <LaunchSplash onFinish={finishLaunch} />;
+  if (needsOnboarding) {
+    return (
+      <>
+        <OnboardingWizard onComplete={handleOnboardingComplete} />
+        {launching && <LaunchSplash onFinish={finishLaunch} />}
+      </>
+    );
   }
 
-  if (needsOnboarding) {
-    return <OnboardingWizard onComplete={handleOnboardingComplete} />;
+  if (launching) {
+    return <LaunchSplash onFinish={finishLaunch} />;
   }
 
   return (

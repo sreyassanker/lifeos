@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -36,14 +37,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <script
-          async
+      </head>
+      <body className="min-h-full flex flex-col">
+        <Script
+          id="service-worker"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); }); }`,
           }}
         />
-      </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+        {children}
+      </body>
     </html>
   );
 }

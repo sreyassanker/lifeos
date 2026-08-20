@@ -27,6 +27,15 @@ A free, privacy-first, scientifically-grounded health platform — available as 
 
 ---
 
+<p align="center">
+
+[![Website](https://img.shields.io/badge/Portfolio-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://sreyassanker.vercel.app)
+[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sreyassanker)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/sreyassanker)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/sreyassanker)
+
+</p>
+
 ## Overview
 
 LifeOS bundles the everyday basics of health management into one place — **sleep, body, nutrition, fitness, and daily routine** — in a single app with **10 tools**, backed by **55+ peer-reviewed research studies**, and running entirely on your device. No account. No tracking. Your data never leaves your device.
